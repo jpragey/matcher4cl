@@ -33,15 +33,15 @@ shared class ThrowingResultHandler(
     void printer(String multilineDescription)  => process.writeErrorLine(multilineDescription)
 ) satisfies ResultHandler {
     
-    String createMessage(TextFormat writer, MatcherResult matcherResult, String prefix) {
+    StringBuilder createMessage(TextFormat writer, Description description, String prefix, FootNoteCollector footNoteCollector, Integer indentCount = 0) {
         
         StringBuilder sb = StringBuilder();
         
         sb.append(prefix);
-        matcherResult.matchDescription.appendTo(sb, writer, 0);
+        description.appendTo(sb, writer, indentCount, footNoteCollector);
         
-        String msg = sb.string;
-        return msg;
+//        String msg = sb.string;
+        return sb;
     }
     
     doc "Throws a [[MatchException]] if `matcherResult` shows a mismatch.
@@ -57,14 +57,33 @@ shared class ThrowingResultHandler(
         
         // -- Create short message
         if(matcherResult.failed()) {
-            String shortMsg = createMessage(SimpleTextFormat(false /*multiLine*/, ""/*indent*/), matcherResult, prefix);
+            
+            StringBuilder shortMsg = createMessage(SimpleTextFormat(false /*multiLine*/, ""/*indent*/), matcherResult.matchDescription, prefix, FootNoteCollector() /*not used*/);
             
             if(printMultilineDescr) {
-                String multilineMsg = createMessage(SimpleTextFormat(true /*multiLine*/, "  "/*indent*/), matcherResult, prefix);
-                printer(multilineMsg);
+                TextFormat textFormat = SimpleTextFormat(true /*multiLine*/, "  "/*indent*/);
+                
+                // -- Multiline message, collect footnotes 
+                FootNoteCollector footNoteCollector = FootNoteCollector();
+                StringBuilder multilineMsg = createMessage(textFormat, matcherResult.matchDescription, prefix, footNoteCollector);
+                printer(multilineMsg.string);
+                
+                // -- print footnotes
+                for(footnode in footNoteCollector.footNotes()) {
+                    StringBuilder stringBuilder = StringBuilder();
+                    
+                    textFormat.writeText(stringBuilder, normalStyle, "Reference [``footnode.reference``]:");
+                    textFormat.writeNewLineIndent(stringBuilder, 0 /*indentCount*/);
+                    String refLine = stringBuilder.string;
+                    
+                    StringBuilder footnoteMsg = createMessage(textFormat, footnode.description, refLine, FootNoteCollector() /*not used*/, 1);
+                    textFormat.writeNewLineIndent(footnoteMsg, 0 /*indentCount*/);
+                    
+                    printer(footnoteMsg.string);
+                }
             }
             
-            throw MatchException(matcherResult.matchDescription, shortMsg);
+            throw MatchException(matcherResult.matchDescription, shortMsg.string);
         }
     }
 }

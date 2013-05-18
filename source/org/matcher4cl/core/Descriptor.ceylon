@@ -4,7 +4,7 @@ doc "Convert a simple object to a String, used for description to string convers
 see "`ValueDescription`"
 by "Jean-Pierre Ragey"
 shared interface Descriptor {
-    shared formal String describe(Object? obj);
+    shared formal String describe(Object? obj, FootNoteCollector footNoteCollector);
 }
 
 doc "Default descriptor:
@@ -16,7 +16,7 @@ doc "Default descriptor:
 by "Jean-Pierre Ragey"
 shared class DefaultDescriptor() satisfies Descriptor {
     
-    shared actual String describe(Object? obj) {
+    shared actual String describe(Object? obj, FootNoteCollector footNoteCollector) {
         
         if(is String obj) {
             return "\"" + obj.string + "\"";

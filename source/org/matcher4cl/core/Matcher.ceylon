@@ -381,7 +381,9 @@ shared class ObjectMatcher<T> (
         doc "The expected object."
         T expected,
         doc "Adapters for each field, to get actual objects fields and field matchers."
-        {FieldAdapter<T> *} fieldMatchers
+        {FieldAdapter<T> *} fieldMatchers,
+        doc "Descriptor used to describe actual value, if its type doesn't describe the expected one.'"
+        Descriptor descriptor = DefaultDescriptor()
         ) satisfies Matcher 
         given T satisfies Object
 {
@@ -414,14 +416,28 @@ shared class ObjectMatcher<T> (
             return MatcherResult(succeeded, objectDescription);
             
         } else {    // actual is not a T
-            variable String actualName = "<null>";
-            if(exists actual) {
-                actualName = className(actual);
-            }
-            return MatcherResult(false, FormattedDescription(DefaultFormatter("A {} was expected, found {}"), [className(expected), actualName], highlighted /*error*/));
+            return MatcherResult(false, wrongTypeDescription<T>(actual, expected, descriptor));
         }
     }
     
+}
+
+Description wrongTypeDescription<T>(
+    Object? actual, 
+    T expected, 
+    Descriptor descriptor
+) given T satisfies Object 
+{
+    variable String actualName = "<null>";
+    if(exists actual) {
+        actualName = className(actual);
+    }
+    Description d = CatDescription({
+        StringDescription(highlighted, "A ``className(expected)`` was expected, found ``actualName``"),
+        ValueDescription(highlighted, actual, descriptor)
+    });
+    
+    return d;    
 }
 
 doc "Compound matcher, matches when all children matcher match."

@@ -1,4 +1,4 @@
-import org.matcher4cl.core{ assertThat, EqualsMatcher, ObjectMatcher, Matcher, DefaultMatcherResolver, Is, ListMatcher, OptionalMatcherResolver, Descriptor, DefaultDescriptor, FieldAdapter }
+import org.matcher4cl.core{ assertThat, EqualsMatcher, ObjectMatcher, Matcher, DefaultMatcherResolver, Is, ListMatcher, OptionalMatcherResolver, Descriptor, DefaultDescriptor, FieldAdapter, FootNoteCollector }
 
 
 void customResolverTest() {
@@ -43,14 +43,14 @@ void customResolverWithDescriptorTest() {
     // Custom descriptor
     object customDescriptor satisfies Descriptor {
         value default = DefaultDescriptor();
-        shared actual String describe(Object? obj) {
+        shared actual String describe(Object? obj, FootNoteCollector footNoteCollector) {
             if(is User obj) {
                 return "User " + obj.name + ", phones: " + obj.phones.string;
             }
             if(is Phone obj) {
                 return "Phone: " + obj.phoneNb;
             }
-            return default.describe(obj);
+            return default.describe(obj, footNoteCollector);
         }
     }
 

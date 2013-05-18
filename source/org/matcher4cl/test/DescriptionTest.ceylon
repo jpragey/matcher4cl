@@ -1,10 +1,11 @@
 import ceylon.test { assertEquals }
-import org.matcher4cl.core{ ListDescription, Description, TextFormat, SimpleTextFormat, ValueDescription, normalStyle, highlighted, MatchDescription, FormattedDescription, DefaultFormatter, MapDescription, MapEntryDescription, StringDescription, ObjectFieldDescription, ObjectDescription }
+import org.matcher4cl.core{ ListDescription, Description, TextFormat, SimpleTextFormat, ValueDescription, normalStyle, highlighted, MatchDescription, FormattedDescription, DefaultFormatter, MapDescription, MapEntryDescription, StringDescription, ObjectFieldDescription, ObjectDescription, FootNoteCollector }
 
 
 String dToS(Description description, TextFormat descriptionWriter = SimpleTextFormat(false /*multiLine*/)) {
     StringBuilder sb = StringBuilder();
-    description.appendTo(sb, descriptionWriter, 0);
+    FootNoteCollector footNoteCollector = FootNoteCollector();
+    description.appendTo(sb, descriptionWriter, 0, footNoteCollector);
     String s = sb.string;
     return s;
 }

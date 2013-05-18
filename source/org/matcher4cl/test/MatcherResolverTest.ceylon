@@ -23,7 +23,7 @@ void matcherResolverTestSuite() {
     TestRunner testRunner = TestRunner();
     testRunner.addTestListener(PrintingTestListener());
 
-    testRunner.addTest("org.jpr.matchers.core::matcherResolverTest", matcherResolverTest);
+    testRunner.addTest("org.matcher4cl.core::matcherResolverTest", matcherResolverTest);
     
     testRunner.run();
 }

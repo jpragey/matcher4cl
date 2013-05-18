@@ -4,7 +4,7 @@ see ("FormattedDescription","DefaultFormatter")
 by "Jean-Pierre Ragey"
 shared interface Formatter {
     doc "Message parameters. Their use in messages is implementation-dependant."
-    shared formal String toString([Object *] parameters);
+    shared formal String toString([Object *] parameters, FootNoteCollector footNoteCollector);
 }
 
 
@@ -23,20 +23,20 @@ shared class DefaultFormatter(
     ) satisfies Formatter 
 {
     interface TemplatePart {
-        shared formal void append(StringBuilder stringBuilder, [Object *] parameters);
+        shared formal void append(StringBuilder stringBuilder, [Object *] parameters, FootNoteCollector footNoteCollector);
     }
 
     class StringTemplatePart(String part) satisfies TemplatePart {
-        shared actual void append(StringBuilder stringBuilder, [Object *] parameters) {
+        shared actual void append(StringBuilder stringBuilder, [Object *] parameters, FootNoteCollector footNoteCollector) {
             stringBuilder.append(part);
         }
     }
     
-    class ParameterTemplatePart(Integer paramIndex, String(Object) part) satisfies TemplatePart {
-        shared actual void append(StringBuilder stringBuilder, [Object *] parameters) {
+    class ParameterTemplatePart(Integer paramIndex, String(Object, FootNoteCollector) part) satisfies TemplatePart {
+        shared actual void append(StringBuilder stringBuilder, [Object *] parameters, FootNoteCollector footNoteCollector) {
             Object? param = parameters[paramIndex];
             assert(exists param);
-            String s = part(param);
+            String s = part(param, footNoteCollector);
             stringBuilder.append(s);
         }
     }
@@ -63,7 +63,7 @@ shared class DefaultFormatter(
                 assert (insideParameter);
                 insideParameter = false;
                 
-                String(Object) part = (Object o) =>  descriptor.describe(o); 
+                String(Object, FootNoteCollector) part = (Object o, FootNoteCollector footNoteCollector) =>  descriptor.describe(o, footNoteCollector); 
                 templateParts.append(ParameterTemplatePart(paramIndex, part));
                 sb.reset();
                 paramIndex++;
@@ -86,10 +86,10 @@ shared class DefaultFormatter(
     TemplatePart[] templateParts = splitTemplate();
     
     doc "Convert template to string, replacing all '{}' by successive parameters."
-    shared actual String toString([Object *] parameters) {
+    shared actual String toString([Object *] parameters, FootNoteCollector footNoteCollector) {
         StringBuilder sb = StringBuilder();
         for(TemplatePart tp in templateParts) {
-            tp.append(sb, parameters);
+            tp.append(sb, parameters, footNoteCollector);
         }
         String result = sb.string;
         return result;
