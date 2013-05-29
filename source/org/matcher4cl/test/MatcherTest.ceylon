@@ -33,8 +33,9 @@ void listMatcherTest() {
     assertEquals("<<<An iterator was expected, found null>>>", dToS(ListMatcher([10, 11, 12]).match(null).matchDescription));
 
     assertFalse(ListMatcher([10, 11, 12]).match(42).succeeded);
-    assertEquals("<<<An iterator was expected, found ceylon.language::Integer>>>", dToS(ListMatcher([10, 11, 12]).match(42).matchDescription));
-    
+    assertEquals("<<<An iterator was expected, found ceylon.language::Integer>>> value = 42", dToS(ListMatcher([10, 11, 12]).match(42).matchDescription)); // TODO: better expr
+    //<<<An iterator was expected, found ceylon.language::Integer>>> != <<<An iterator was expected, found ceylon.language::Integer>>>42"
+                                                                                                                                       
     assertFalse(ListMatcher([10, 11, 12]).match([10, 11]).succeeded);
     assertEquals("Expected list is longer than actual: 3 expected, 2 actual:  {10, 11} => ERR 1 expected not in actual list:  {12}", 
         dToS(ListMatcher([10, 11, 12]).match([10, 11]).matchDescription));
@@ -46,6 +47,10 @@ void listMatcherTest() {
     assertFalse(ListMatcher([10, 11, [12, 13]]).match([10, 11, [12, 14]]).succeeded);
     assertEquals("1 mismatched: {10, 11, <<<At position 2 >>>\"ListMatcher\": 1 mismatched: {12, <<<At position 1 >>>\"==\": '=='13/<<<14>>>}}", 
         dToS(ListMatcher([10, 11, [12, 13]]).match([10, 11, [12, 14]]).matchDescription));
+    
+    // Tuples containing nulls
+//    assertTrue(ListMatcher([10, 11, 12]).match([10, 11, 12]).succeeded);
+    //assertEquals("<<<An iterator was expected, found null>>>", dToS(ListMatcher([10, 11, 12]).match(null).matchDescription));
 }
 
 void mapMatcherTest() {
