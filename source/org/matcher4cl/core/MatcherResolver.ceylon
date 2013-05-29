@@ -62,7 +62,7 @@ shared class DefaultMatcherResolver(
         }
         
         // -- Other iterables
-        if(is Iterable<Object> expected) {
+        if(is Iterable<Object?> expected) {
             return ListMatcher(expected, descriptor);
         }
         
