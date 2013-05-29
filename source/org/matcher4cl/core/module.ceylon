@@ -1,6 +1,6 @@
 doc "Matcher library for Ceylon.
      
-     ## 5 mn introduction
+     # 5 mn introduction
      A matcher is an object that checks that another object is 'equal' to a predefined value. 
      Its most common usage is probably testing, when the actual result of an expression must match an expected value,
      otherwise an exception is thrown, carrying some meaningfull mismatch description.
@@ -33,7 +33,7 @@ doc "Matcher library for Ceylon.
         `Description` field to other formats: multiline message, or HTML, more convenient for complex objects (eg lists, maps, etc).     
         
      
-     ## Matchers
+     # Matchers
      
      The `Matcher` implementations match actual object against specific values:  
      
@@ -109,7 +109,7 @@ doc "Matcher library for Ceylon.
             assertThat(actual, FloatMatcher((pi*pi)/6, 0.001));
          } 
               
-     ### Custom class matchers
+     ## Custom class matchers
      
      Simple custom class matchers can be created using [[ObjectMatcher]] and [[FieldAdapter]]. `FieldAdapter` delegates 
      a single field matching to a field specific matcher; `ObjectMatcher` delegates custom class matching 
@@ -132,7 +132,7 @@ doc "Matcher library for Ceylon.
      When run you get a \" &lt;&lt;&lt;User&gt;&gt;&gt; {name: ('=='\"John\"/&lt;&lt;&lt;\"Ted\"&gt;&gt;&gt;), age: ('=='20/&lt;&lt;&lt;30&gt;&gt;&gt;)}\"
      message.
      
-     ## Resolvers
+     # Resolvers
      
      When matching a complex object, finding a matcher for a sub-object may be challenging. For example, 
      when matching lists or maps, there should be a way to specify element matchers. Generics may help in simple cases,
@@ -191,7 +191,7 @@ doc "Matcher library for Ceylon.
       
          myAssertThat({User(\"Ted\", 30)}, MyIs({User(\"John\", 20)}));
 
-     ## Descriptors
+     # Descriptors
      
      When generating description messages, you may need to customize the way classes are printed.
      If they have a suitable `string` property, everything is fine, but sometimes they don't 
@@ -199,7 +199,7 @@ doc "Matcher library for Ceylon.
      A `Descriptor` converts an object to a String:
      
          shared interface Descriptor {
-            shared formal String describe(Object? obj);
+            shared formal String describe(Object? obj, DescriptorEnv descriptorEnv);
          }
      Usually, descriptor default to [[DefaultDescriptor]].
      
@@ -222,11 +222,11 @@ doc "Matcher library for Ceylon.
             // Custom descriptor: customize Complex objects, otherwise delegate to DefaultDescriptor 
             object descriptor satisfies Descriptor {
                 value default = DefaultDescriptor();
-                shared actual String describe(Object? obj) {
+                shared actual String describe(Object? obj, DescriptorEnv descriptorEnv) {
                     if(is Complex obj) {
                         return \"\" + obj.re.string + \" + \" + obj.im.string + \"i \";
                     }
-                    return default.describe(obj);
+                    return default.describe(obj, descriptorEnv);
                 }
             }
             // Custom Is(), to simplify assertions 
@@ -237,6 +237,78 @@ doc "Matcher library for Ceylon.
      
      The assertion will print:
             '=='1.0 + 0.0i /<<<1.0 + 0.1i >>>
+     
+     ### Long descriptions: footnotes
+     
+     If an object is too complex, its description may be lengthy, and may lead to hardly readable message.
+     Matcher4cl provides a footnote mechanism, in which long descriptions may be deferred to the end of mismatch description: 
+     - a descriptor creates a `Description` for the long message (as long as needed, eg using [[TreeDescription]]s);
+     - it creates a new [[FootNote]] by `DescriptorEnv.newFootNote(Description)`;
+     - it returns a short message, embedding the footnote index.
+     When the mismatch description is created, footnotes are collected by the `DescriptorEnv`, and are appended 
+     to the output message (eg by the `ThrowingResultHandler`).
+     
+     Example: let's write a config file parser, that return some detailed error description if it fails:
+     
+         // Error tree
+         class Error(shared String msg, shared {Error*} causes = {}) {}
+     
+         class AppConfig(shared String appParam/*application configuration here*/) {}
+         
+         AppConfig|Error parseConfigFile(/*file path omitted for brevity*/) {
+            // Always fails, for the demo
+            return Error(\"Can't open application\", {
+                        Error(\"Error reading config file 'myapp.config'\", {
+                            Error(\"Config parameter xyz not found.\"),
+                            Error(\"Config parameter tuv: invalid syntax.\")
+                        })}); 
+         }
+  
+     Embedding all messages in the short messages would be cumberstone, so we choose to write only the first one 
+     and dump the whole tree in a footnote. We first need to convert an `Error` to a Description; as Error is a basically a tree,
+     we use [[TreeDescription]]s and [[StringDescription]]s, in a recursive function:
+     
+         // Convert error tree to description tree
+         Description describeErrorTree(Error error) {
+            Description d = StringDescription(normalStyle, error.msg);
+            if(error.causes.empty) {
+                return d;
+            } else {
+                [Description*] causeDescrs = error.causes.collect((Error err) => describeErrorTree(err));
+                return TreeDescription(d, causeDescrs); 
+            }
+         }
+    
+     So now we can write our custom descriptor:
+     
+         object customDescriptor satisfies Descriptor {
+            value default = DefaultDescriptor();
+            shared actual String describe(Object? obj, DescriptorEnv descriptorEnv) {
+                
+                if(is Error obj) {
+                    FootNote footNote = descriptorEnv.newFootNote(describeErrorTree(obj));
+                    return \"Error: \`\`obj.msg\`\` (see [\`\`footNote.reference\`\`])\";
+                }
+                if(is AppConfig obj) {
+                    return \"AppConfig[ \" + obj.appParam + \" ])\";
+                }
+                return default.describe(obj, descriptorEnv);
+            }
+         }
+
+     And if we try an assertion:
+         void testConfigFileWithFootnotes() {
+            assertThat(parseConfigFile(), EqualsMatcher(AppConfig(\"param\"), customDescriptor));
+         }
+     
+     We get a mismatch message with a footnote:
+     
+         `'=='AppConfig[ param ])/<<<Error: Can't open application (see [0])>>>
+         Reference [0]:
+         Can't open application
+           Error reading config file 'myapp.config'
+             Config parameter xyz not found.
+             Config parameter tuv: invalid syntax.`
      
      ## Descriptors for custom objects fields
      
@@ -255,14 +327,14 @@ doc "Matcher library for Ceylon.
             
             object customDescriptor satisfies Descriptor {
                 value default = DefaultDescriptor();
-                shared actual String describe(Object? obj) {
+                shared actual String describe(Object? obj, DescriptorEnv descriptorEnv) {
                     if(is User obj) {
                         return \"User \" + obj.name + \", phones: \" + obj.phones.string;
                     }
                     if(is Phone obj) {
                         return \"Phone: \" + obj.phoneNb;
                     }
-                    return default.describe(obj);
+                    return default.describe(obj, descriptorEnv);
                 }
             }
 
@@ -438,13 +510,13 @@ doc "Matcher library for Ceylon.
              // Descriptor for all custom classes that requires it
              object descriptor satisfies Descriptor {
                 value default = DefaultDescriptor();
-                shared actual String describe(Object? obj) {
+                shared actual String describe(Object? obj, DescriptorEnv descriptorEnv) {
                     // Add descriptions for custom classes, if needed
                     if(is MyClass obj) {
                         return /*description of MyClass*/;
                     }
                     // Fallback to default descriptor for other objects
-                    return default.describe(obj);
+                    return default.describe(obj, descriptorEnv);
                 }
              }
  

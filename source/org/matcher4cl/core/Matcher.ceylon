@@ -247,7 +247,10 @@ shared class ListMatcher(
             result = MatcherResult(succeded, ld);
             
         } else if(exists actual){
-            result = MatcherResult(false, StringDescription(highlighted, "An iterator was expected, found ``className(actual)``"));
+            result = MatcherResult(false, CatDescription({ 
+                StringDescription(highlighted, "An iterator was expected, found ``className(actual)``"),
+                ValueDescription(normalStyle, actual, descriptor)
+            }));
         } else {
             result = MatcherResult(false, StringDescription(highlighted, "An iterator was expected, found null"));
         }

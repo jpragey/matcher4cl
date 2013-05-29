@@ -33,12 +33,12 @@ shared class ThrowingResultHandler(
     void printer(String multilineDescription)  => process.writeErrorLine(multilineDescription)
 ) satisfies ResultHandler {
     
-    StringBuilder createMessage(TextFormat writer, Description description, String prefix, FootNoteCollector footNoteCollector, Integer indentCount = 0) {
+    StringBuilder createMessage(TextFormat writer, Description description, String prefix, DescriptorEnv descriptorEnv, Integer indentCount = 0) {
         
         StringBuilder sb = StringBuilder();
         
         sb.append(prefix);
-        description.appendTo(sb, writer, indentCount, footNoteCollector);
+        description.appendTo(sb, writer, indentCount, descriptorEnv);
         
 //        String msg = sb.string;
         return sb;
@@ -58,25 +58,25 @@ shared class ThrowingResultHandler(
         // -- Create short message
         if(matcherResult.failed()) {
             
-            StringBuilder shortMsg = createMessage(SimpleTextFormat(false /*multiLine*/, ""/*indent*/), matcherResult.matchDescription, prefix, FootNoteCollector() /*not used*/);
+            StringBuilder shortMsg = createMessage(SimpleTextFormat(false /*multiLine*/, ""/*indent*/), matcherResult.matchDescription, prefix, DefaultDescriptorEnv() /*not used*/);
             
             if(printMultilineDescr) {
                 TextFormat textFormat = SimpleTextFormat(true /*multiLine*/, "  "/*indent*/);
                 
                 // -- Multiline message, collect footnotes 
-                FootNoteCollector footNoteCollector = FootNoteCollector();
-                StringBuilder multilineMsg = createMessage(textFormat, matcherResult.matchDescription, prefix, footNoteCollector);
+                DefaultDescriptorEnv descriptorEnv = DefaultDescriptorEnv();
+                StringBuilder multilineMsg = createMessage(textFormat, matcherResult.matchDescription, prefix, descriptorEnv);
                 printer(multilineMsg.string);
                 
                 // -- print footnotes
-                for(footnode in footNoteCollector.footNotes()) {
+                for(footnode in descriptorEnv.footNotes()) {
                     StringBuilder stringBuilder = StringBuilder();
                     
                     textFormat.writeText(stringBuilder, normalStyle, "Reference [``footnode.reference``]:");
                     textFormat.writeNewLineIndent(stringBuilder, 0 /*indentCount*/);
                     String refLine = stringBuilder.string;
                     
-                    StringBuilder footnoteMsg = createMessage(textFormat, footnode.description, refLine, FootNoteCollector() /*not used*/, 1);
+                    StringBuilder footnoteMsg = createMessage(textFormat, footnode.description, refLine, DefaultDescriptorEnv() /*not used*/, 1);
                     textFormat.writeNewLineIndent(footnoteMsg, 0 /*indentCount*/);
                     
                     printer(footnoteMsg.string);

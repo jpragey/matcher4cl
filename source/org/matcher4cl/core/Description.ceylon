@@ -38,25 +38,6 @@ shared class FootNote(
     shared Description description) {
 }
 
-doc "Create and collect footnotes.
-     It maintains a list of all footnotes it created."
-shared class FootNoteCollector() {
-    variable Integer refCount = 0;
-    SequenceBuilder<FootNote> footNotesBuilder = SequenceBuilder<FootNote>();
-    
-    doc "Create a footnote, and add it to current footnote list."
-    shared FootNote newFootNote(Description description) {
-         FootNote footNote = FootNote(refCount++, description);
-         footNotesBuilder.append(footNote);
-         return footNote;
-    }
-    doc "Get current footnote list."
-    shared [FootNote*] footNotes() {
-        return footNotesBuilder.sequence;
-    }
-}
-
-
 doc "Description of match result."
 by "Jean-Pierre Ragey"
 shared interface Description  
@@ -68,15 +49,15 @@ shared interface Description
         TextFormat textFormat,
         doc "Description node depth (0 for root)" 
         Integer depth,
-        FootNoteCollector footNoteCollector);
+        DescriptorEnv descriptorEnv);
     
     doc "Node level (roughly distance to deepest leaf, used for single line/multiline switching)"
     shared formal Integer level;
     
     doc "Convert this description to String, using `textFormat` formatting."
-    shared String toString(TextFormat textFormat) {
+    shared String toString(TextFormat textFormat, DescriptorEnv descriptorEnv = DefaultDescriptorEnv()) {
         StringBuilder sb = StringBuilder();
-        appendTo(sb, textFormat, 0 /*root level*/, FootNoteCollector());
+        appendTo(sb, textFormat, 0 /*root level*/, descriptorEnv);
         String result = sb.string;
         return result; 
     }
@@ -96,8 +77,8 @@ shared class ValueDescription(
     doc "Always 0."
     shared actual Integer level = 0;
     
-    shared actual void appendTo(StringBuilder stringBuilder, TextFormat textFormat, Integer depth, FootNoteCollector footNoteCollector) {
-        String s = descriptor.describe(val, footNoteCollector);
+    shared actual void appendTo(StringBuilder stringBuilder, TextFormat textFormat, Integer depth, DescriptorEnv descriptorEnv) {
+        String s = descriptor.describe(val, descriptorEnv);
         textFormat.writeText(stringBuilder, textStyle, s);
     } 
 }
@@ -111,7 +92,7 @@ shared class StringDescription(
 
     shared actual Integer level = 0;
     
-    shared actual void appendTo(StringBuilder stringBuilder, TextFormat textFormat, Integer depth, FootNoteCollector footNoteCollector) {
+    shared actual void appendTo(StringBuilder stringBuilder, TextFormat textFormat, Integer depth, DescriptorEnv descriptorEnv) {
         textFormat.writeText(stringBuilder, textStyle, val);
     } 
 }
@@ -127,9 +108,9 @@ shared class CatDescription(
     shared actual Integer level = maxLevel(descriptions);
     
     doc "Append all descriptions contents to stringBuilder."
-    shared actual void appendTo(StringBuilder stringBuilder, TextFormat textFormat, Integer depth, FootNoteCollector footNoteCollector) {
+    shared actual void appendTo(StringBuilder stringBuilder, TextFormat textFormat, Integer depth, DescriptorEnv descriptorEnv) {
         for(Description d in descriptions) {
-            d.appendTo(stringBuilder, textFormat, depth /*keep same depth*/, footNoteCollector);
+            d.appendTo(stringBuilder, textFormat, depth /*keep same depth*/, descriptorEnv);
         }
     } 
 }
@@ -168,10 +149,10 @@ shared class MatchDescription(
          Note that the output value doesn't care if *values* match, it checks only their string representations;
          thus for Float you may get '0.99999999/1.0' even if the matcher decides they are the same.
          "
-    shared actual void appendTo(StringBuilder stringBuilder, TextFormat textFormat, Integer depth, FootNoteCollector footNoteCollector) {
+    shared actual void appendTo(StringBuilder stringBuilder, TextFormat textFormat, Integer depth, DescriptorEnv descriptorEnv) {
         
         if(exists prefix) {
-            prefix.appendTo(stringBuilder, textFormat, depth, footNoteCollector);
+            prefix.appendTo(stringBuilder, textFormat, depth, descriptorEnv);
         }
         
         StringBuilder sb = StringBuilder();
@@ -180,14 +161,14 @@ shared class MatchDescription(
         
         if(writeActual) {
             ValueDescription actDescr = ValueDescription(textStyle, actualObj, descriptor);
-            actDescr.appendTo(sb, textFormat, depth + 1, footNoteCollector);
+            actDescr.appendTo(sb, textFormat, depth + 1, descriptorEnv);
             actString = sb.string;
         }
         sb.reset();
         
         if(writeExpected) {
             ValueDescription expDescr = ValueDescription(normalStyle, expectedObj, descriptor);
-            expDescr.appendTo(sb, textFormat, depth + 1, footNoteCollector);
+            expDescr.appendTo(sb, textFormat, depth + 1, descriptorEnv);
             expString = sb.string;
         }
         
@@ -213,8 +194,8 @@ shared class FormattedDescription(
     doc "Level is always 0."
     shared actual Integer level = 0;
     
-    shared actual void appendTo(StringBuilder stringBuilder, TextFormat textFormat, Integer depth, FootNoteCollector footNoteCollector) {
-        String s = formatter.toString(parameters, footNoteCollector);
+    shared actual void appendTo(StringBuilder stringBuilder, TextFormat textFormat, Integer depth, DescriptorEnv descriptorEnv) {
+        String s = formatter.toString(parameters, descriptorEnv);
         textFormat.writeText(stringBuilder, textStyle, s);
     }
 }
@@ -241,13 +222,13 @@ shared class CompoundDescription(
     
     shared actual Integer level = max{maxLevel(commonElementDescrs), maxLevel(extraExpectedDescrs), maxLevel(extraActualDescrs)} + 1;
     
-    void appendList(StringBuilder stringBuilder, TextFormat textFormat, Description? prefix, {Description*} descriptions, Integer depth, FootNoteCollector footNoteCollector) {
+    void appendList(StringBuilder stringBuilder, TextFormat textFormat, Description? prefix, {Description*} descriptions, Integer depth, DescriptorEnv descriptorEnv) {
         
         Boolean multiline = level > singleLineLevel;
         
         // -- First line: <indent> prefix '{'
         if(exists prefix) {
-            prefix.appendTo(stringBuilder, textFormat, depth, footNoteCollector);
+            prefix.appendTo(stringBuilder, textFormat, depth, descriptorEnv);
             textFormat.writeText(stringBuilder, normalStyle, " ");
         }
         textFormat.writeText(stringBuilder, normalStyle, "{");
@@ -262,7 +243,7 @@ shared class CompoundDescription(
             if(multiline) {
                 textFormat.writeNewLineIndent(stringBuilder, depth+1);
             }
-            d.appendTo(stringBuilder, textFormat, depth+1, footNoteCollector);
+            d.appendTo(stringBuilder, textFormat, depth+1, descriptorEnv);
             
             first = false;
         }
@@ -274,20 +255,20 @@ shared class CompoundDescription(
         textFormat.writeText(stringBuilder, normalStyle, "}");
     }
 
-    void writeOptList([Description*] descrs, StringBuilder stringBuilder, TextFormat textFormat, Formatter formatter, Integer depth, FootNoteCollector footNoteCollector) {
+    void writeOptList([Description*] descrs, StringBuilder stringBuilder, TextFormat textFormat, Formatter formatter, Integer depth, DescriptorEnv descriptorEnv) {
         if(nonempty descrs) {
             textFormat.writeNewLineIndent(stringBuilder, depth);
-            appendList(stringBuilder, textFormat, FormattedDescription(formatter, [descrs.size]), descrs, depth, footNoteCollector);
+            appendList(stringBuilder, textFormat, FormattedDescription(formatter, [descrs.size]), descrs, depth, descriptorEnv);
         }    
     }
     
-    shared actual void appendTo(StringBuilder stringBuilder, TextFormat descriptionWriter, Integer depth, FootNoteCollector footNoteCollector) {
+    shared actual void appendTo(StringBuilder stringBuilder, TextFormat descriptionWriter, Integer depth, DescriptorEnv descriptorEnv) {
 
-        appendList(stringBuilder, descriptionWriter, prefixDescription, commonElementDescrs, depth, footNoteCollector);
+        appendList(stringBuilder, descriptionWriter, prefixDescription, commonElementDescrs, depth, descriptorEnv);
 
         // -- Extra expected elements
-        writeOptList(extraExpectedDescrs, stringBuilder, descriptionWriter, extraExpectedFormatter, depth, footNoteCollector);
-        writeOptList(extraActualDescrs, stringBuilder, descriptionWriter, extraActualFormatter, depth, footNoteCollector);
+        writeOptList(extraExpectedDescrs, stringBuilder, descriptionWriter, extraExpectedFormatter, depth, descriptorEnv);
+        writeOptList(extraActualDescrs, stringBuilder, descriptionWriter, extraActualFormatter, depth, descriptorEnv);
     }
 }
 
@@ -300,18 +281,18 @@ shared class TreeDescription(
     
     shared actual Integer level = maxLevel(commonElementDescrs) + 1;
     
-    void appendList(StringBuilder stringBuilder, TextFormat textFormat, Description nodeDescription, {Description*} descriptions, Integer depth, FootNoteCollector footNoteCollector) {
+    void appendList(StringBuilder stringBuilder, TextFormat textFormat, Description nodeDescription, {Description*} descriptions, Integer depth, DescriptorEnv descriptorEnv) {
         
-        nodeDescription.appendTo(stringBuilder, textFormat, depth, footNoteCollector);
+        nodeDescription.appendTo(stringBuilder, textFormat, depth, descriptorEnv);
         
         for(d in descriptions) {
             textFormat.writeNewLineIndent(stringBuilder, depth);
-            d.appendTo(stringBuilder, textFormat, depth+1, footNoteCollector);
+            d.appendTo(stringBuilder, textFormat, depth+1, descriptorEnv);
         }
     }
 
-    shared actual void appendTo(StringBuilder stringBuilder, TextFormat textFormat, Integer depth, FootNoteCollector footNoteCollector) {
-        appendList(stringBuilder, textFormat, description, commonElementDescrs, depth, footNoteCollector);
+    shared actual void appendTo(StringBuilder stringBuilder, TextFormat textFormat, Integer depth, DescriptorEnv descriptorEnv) {
+        appendList(stringBuilder, textFormat, description, commonElementDescrs, depth, descriptorEnv);
     }
 }
 
@@ -341,10 +322,10 @@ shared class MapEntryDescription(
     
     shared actual Integer level = maxLevel{keyDescr, valueDescr};
     
-    shared actual void appendTo(StringBuilder stringBuilder, TextFormat textFormat, Integer depth, FootNoteCollector footNoteCollector) {
-        keyDescr.appendTo(stringBuilder, textFormat, depth + 1, footNoteCollector);
+    shared actual void appendTo(StringBuilder stringBuilder, TextFormat textFormat, Integer depth, DescriptorEnv descriptorEnv) {
+        keyDescr.appendTo(stringBuilder, textFormat, depth + 1, descriptorEnv);
         textFormat.writeText(stringBuilder, normalStyle, "->");
-        valueDescr.appendTo(stringBuilder, textFormat, depth + 1, footNoteCollector);
+        valueDescr.appendTo(stringBuilder, textFormat, depth + 1, descriptorEnv);
     }
 }
 
@@ -384,11 +365,11 @@ shared class ObjectFieldDescription(
     doc "Same level as `valueDescription`"
     shared actual Integer level = valueDescription.level;
     
-    shared actual void appendTo(StringBuilder stringBuilder, TextFormat textFormat, Integer depth, FootNoteCollector footNoteCollector) {
+    shared actual void appendTo(StringBuilder stringBuilder, TextFormat textFormat, Integer depth, DescriptorEnv descriptorEnv) {
         
         textFormat.writeText(stringBuilder, normalStyle, fieldName);
         textFormat.writeText(stringBuilder, normalStyle, ": (");
-        valueDescription.appendTo(stringBuilder, textFormat, depth+1, footNoteCollector);
+        valueDescription.appendTo(stringBuilder, textFormat, depth+1, descriptorEnv);
         textFormat.writeText(stringBuilder, normalStyle, ")");
     }
 }
@@ -427,10 +408,10 @@ shared class ChildDescription (
     shared actual Integer level = description.level;
     
     doc "Append to `stringBuilder` the prefix, the \": \" string, and the wrapped description."
-    shared actual void appendTo(StringBuilder stringBuilder, TextFormat textFormat, Integer depth, FootNoteCollector footNoteCollector) {
-        prefix.appendTo(stringBuilder, textFormat, depth+1, footNoteCollector);
+    shared actual void appendTo(StringBuilder stringBuilder, TextFormat textFormat, Integer depth, DescriptorEnv descriptorEnv) {
+        prefix.appendTo(stringBuilder, textFormat, depth+1, descriptorEnv);
         textFormat.writeText(stringBuilder, normalStyle, ": ");
-        description.appendTo(stringBuilder, textFormat, depth+1, footNoteCollector);
+        description.appendTo(stringBuilder, textFormat, depth+1, descriptorEnv);
     }
 }
 

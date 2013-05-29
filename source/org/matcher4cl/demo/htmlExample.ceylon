@@ -1,5 +1,5 @@
 import ceylon.file { File, Nil, Writer, Path, parsePath }
-import org.matcher4cl.core{ TextFormat, TextStyle, highlighted, assertThat, MatchException, Is, Description, FootNoteCollector }
+import org.matcher4cl.core{ TextFormat, TextStyle, highlighted, assertThat, MatchException, Is, Description, DescriptorEnv, DefaultDescriptorEnv }
 import ceylon.collection { HashMap }
     
 class HtmlTextFormat() satisfies TextFormat {
@@ -54,8 +54,8 @@ void writeHtmlFile(Path filePath, Description description) {
         
         // write description
         StringBuilder sb = StringBuilder();
-        FootNoteCollector footNoteCollector = FootNoteCollector();
-        description.appendTo(sb, HtmlTextFormat(), 0, footNoteCollector);
+        DescriptorEnv descriptorEnv = DefaultDescriptorEnv();
+        description.appendTo(sb, HtmlTextFormat(), 0, descriptorEnv);
         writer.write(sb.string);
         
         writer.write("</body></html>");

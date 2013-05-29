@@ -1,4 +1,4 @@
-import org.matcher4cl.core{ assertThat, DefaultMatcherResolver, Is, Descriptor, DefaultDescriptor, Matcher, OptionalMatcherResolver, ObjectMatcher, MatcherResolver, FieldAdapter, EqualsMatcher, ListMatcher, ThrowingResultHandler, FootNoteCollector, Description, StringDescription, TextStyle, normalStyle, CompoundDescription, FootNote, TreeDescription }
+import org.matcher4cl.core{ assertThat, DefaultMatcherResolver, Is, Descriptor, DefaultDescriptor, Matcher, OptionalMatcherResolver, ObjectMatcher, MatcherResolver, FieldAdapter, EqualsMatcher, ListMatcher, ThrowingResultHandler, Description, StringDescription, TextStyle, normalStyle, CompoundDescription, FootNote, TreeDescription, DescriptorEnv }
 import ceylon.collection { HashMap }
 
 
@@ -19,11 +19,11 @@ void customDescriptorTest() {
     // Custom descriptor: customize Complex objects, otherwise delegate to DefaultDescriptor 
     object descriptor satisfies Descriptor {
         value default = DefaultDescriptor();
-        shared actual String describe(Object? obj, FootNoteCollector footNoteCollector) {
+        shared actual String describe(Object? obj, DescriptorEnv descriptorEnv) {
             if(is Complex obj) {
                 return "" + obj.re.string + " + " + obj.im.string + "i ";
             }
-            return default.describe(obj, footNoteCollector);
+            return default.describe(obj, descriptorEnv);
         }
     }
     
@@ -35,7 +35,7 @@ void customDescriptorTest() {
 // ---------------
 class Error(shared String msg, shared {Error*} causes = {}) {}
 class AppConfig(shared String appParam/*application configuration here*/) {}
-AppConfig|Error readConfigFile(/*file path omitted for brevity*/) {
+AppConfig|Error parseConfigFile(/*file path omitted for brevity*/) {
     // Fails, in this example
     return 
     Error("Can't open application", {
@@ -46,36 +46,36 @@ AppConfig|Error readConfigFile(/*file path omitted for brevity*/) {
 }
 
 // -- Basic test
-void poorTestConfigFile0() {    // Message is '=='org.matcher4cl.demo.AppConfig@7e1c8e60/<<<org.matcher4cl.demo.Error@1ab95774>>>
-    assertThat(readConfigFile(), Is(AppConfig("param")));
+void poorTestConfigFile() {    // Message is '=='org.matcher4cl.demo.AppConfig@7e1c8e60/<<<org.matcher4cl.demo.Error@1ab95774>>>
+    assertThat(parseConfigFile(), Is(AppConfig("param")));
 }
 
 // -- Test with custom descriptor
 
 // Create a (tree) description for an error.
 // NB: should be locale to customDescriptor.describe(), but ceylon bugs here.
-Description errorDescr(Error error) {
-    Description d0 = StringDescription(normalStyle, error.msg);
+Description describeErrorTree(Error error) {
+    Description d = StringDescription(normalStyle, error.msg);
     if(error.causes.empty) {
-        return d0;
+        return d;
     } else {
-        [Description*] causeDescrs = error.causes.collect((Error err) => errorDescr(err));
-        return TreeDescription(d0, causeDescrs); 
+        [Description*] causeDescrs = error.causes.collect((Error err) => describeErrorTree(err));
+        return TreeDescription(d, causeDescrs); 
     }
 }
 
 object customDescriptor satisfies Descriptor {
     value default = DefaultDescriptor();
-    shared actual String describe(Object? obj, FootNoteCollector footNoteCollector) {
+    shared actual String describe(Object? obj, DescriptorEnv descriptorEnv) {
         
         if(is Error obj) {
-            FootNote footNote = footNoteCollector.newFootNote(errorDescr(obj));
-            return "Error: " + obj.msg + " (see [``footNote.reference``])";
+            FootNote footNote = descriptorEnv.newFootNote(describeErrorTree(obj));
+            return "Error: ``obj.msg`` (see [``footNote.reference``])";
         }
         if(is AppConfig obj) {
             return "AppConfig[ " + obj.appParam + " ])";
         }
-        return default.describe(obj, footNoteCollector);
+        return default.describe(obj, descriptorEnv);
     }
 }
 // Resolver for custom classes
@@ -97,16 +97,16 @@ MatcherResolver resolver = DefaultMatcherResolver({customMatcherResolver}, custo
 
     
 void testConfigFileWithFootnotes() {
-//    assertThat(readConfigFile(), EqualsMatcher(AppConfig("param"), customDescriptor));
-//    assertThat(readConfigFile(), ObjectMatcher<AppConfig>(AppConfig("---"), {
+    assertThat(parseConfigFile(), EqualsMatcher(AppConfig("param"), customDescriptor));
+//    assertThat(parseConfigFile(), ObjectMatcher<AppConfig>(AppConfig("---"), {
 //        }, customDescriptor));
-    //assertThat([readConfigFile(), readConfigFile(), readConfigFile()], 
-    //    ListMatcher([AppConfig(""), AppConfig(""), AppConfig("")], customDescriptor), null, resolver);
+    //assertThat([parseConfigFile(), readConfigFile(), readConfigFile()], 
+    //    ListMatcher([parseConfigFile(""), AppConfig(""), AppConfig("")], customDescriptor), null, resolver);
 //
-//    assertThat([[readConfigFile()]], Is([[AppConfig("")]], resolver), null, resolver);
+//    assertThat([[parseConfigFile()]], Is([[AppConfig("")]], resolver), null, resolver);
     //assertThat(HashMap<String, Object>{"a" -> readConfigFile()}, 
     //        Is(HashMap<String, Object>{"a" -> AppConfig("param")}, resolver));
-    assertThat(readConfigFile(), Is(AppConfig(""), resolver));
+//    assertThat(parseConfigFile(), Is(AppConfig(""), resolver));
 }
 
 
