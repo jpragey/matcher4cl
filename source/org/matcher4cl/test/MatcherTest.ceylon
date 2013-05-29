@@ -47,10 +47,23 @@ void listMatcherTest() {
     assertFalse(ListMatcher([10, 11, [12, 13]]).match([10, 11, [12, 14]]).succeeded);
     assertEquals("1 mismatched: {10, 11, <<<At position 2 >>>\"ListMatcher\": 1 mismatched: {12, <<<At position 1 >>>\"==\": '=='13/<<<14>>>}}", 
         dToS(ListMatcher([10, 11, [12, 13]]).match([10, 11, [12, 14]]).matchDescription));
+
+    // -- Tuples containing nulls
+        
+    assertTrue(ListMatcher([10, 11, null]).match([10, 11, null]).succeeded);
+    assertTrue(ListMatcher([null]).match([null]).succeeded);
     
-    // Tuples containing nulls
-//    assertTrue(ListMatcher([10, 11, 12]).match([10, 11, 12]).succeeded);
-    //assertEquals("<<<An iterator was expected, found null>>>", dToS(ListMatcher([10, 11, 12]).match(null).matchDescription));
+    assertFalse(ListMatcher([10]).match([null]).succeeded);
+    assertEquals("1 mismatched: {<<<At position 0 >>>\"==\": ERR: non-null was expected: 10/<<<<null>>>>}", dToS(ListMatcher([10]).match([null]).matchDescription));
+    
+    assertFalse(ListMatcher([null]).match([10]).succeeded);
+    assertEquals("1 mismatched: {<<<At position 0 >>>\"==\": ERR: <null> was expected: <null>/<<<10>>>}", dToS(ListMatcher([null]).match([10]).matchDescription));
+    
+    assertFalse(ListMatcher([10, null]).match([10]).succeeded);
+    assertEquals("Expected list is longer than actual: 2 expected, 1 actual:  {10} => ERR 1 expected not in actual list:  {<null>}", dToS(ListMatcher([10, null]).match([10]).matchDescription));
+    
+    assertFalse(ListMatcher([10]).match([10, null]).succeeded);
+    assertEquals("Actual list is longer than expected: 1 expected, 2 actual:  {10} => ERR 1 actual not in expected list:  {<null>}", dToS(ListMatcher([10]).match([10, null]).matchDescription));
 }
 
 void mapMatcherTest() {

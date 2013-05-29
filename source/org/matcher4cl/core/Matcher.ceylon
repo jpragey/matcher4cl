@@ -163,7 +163,7 @@ doc "Matcher for `Iterable` values."
 by "Jean-Pierre Ragey"
 shared class ListMatcher(
         doc "Expected elements"
-        {Object *} expected,
+        {Object? *} expected,
         doc "Descriptor for elements decriptions " 
         Descriptor descriptor = DefaultDescriptor()
         ) satisfies Matcher 
@@ -179,15 +179,15 @@ shared class ListMatcher(
         MatcherResolver matcherResolver) {
         MatcherResult result;
         
-        if(is Iterable<Object> actual) {
+        if(is Iterable<Object?> actual) {
             
             SequenceBuilder<Description> elementsDescrSb = SequenceBuilder<Description>();
             SequenceBuilder<Description> extraActualDescrSb = SequenceBuilder<Description>();
             SequenceBuilder<Description> extraExpectedDescrSb = SequenceBuilder<Description>();
             variable Integer mismatchCount = 0;
             
-            Iterator<Object> expIt = expected.iterator();
-            Iterator<Object> actIt = actual.iterator();
+            Iterator<Object?> expIt = expected.iterator();
+            Iterator<Object?> actIt = actual.iterator();
             variable Integer index = 0;
             while(!is Finished a = actIt.next()) {
                 if(!is Finished e = expIt.next()) {
