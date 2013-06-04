@@ -1,5 +1,5 @@
 import ceylon.file { File, Nil, Writer, Path, parsePath }
-import org.matcher4cl.core{ TextFormat, TextStyle, highlighted, assertThat, MatchException, Is, Description, DescriptorEnv, DefaultDescriptorEnv }
+import org.matcher4cl.core{ TextFormat, TextStyle, highlighted, assertThat, MatchException, Is, Description, DescriptorEnv, DefaultDescriptorEnv, normalStyle }
 import ceylon.collection { HashMap }
     
 class HtmlTextFormat() satisfies TextFormat {
@@ -64,6 +64,7 @@ void writeHtmlFile(Path filePath, Description description) {
     }
 }
 
+
 void htmlExample() {
 
     try {
@@ -75,3 +76,56 @@ void htmlExample() {
         writeHtmlFile(parsePath(tmpPath).childPath("testReport.html"), e.mismatchDescription);
     }
 }
+
+void writeHtmlFileWithFootNotes(Path filePath, Description description) {
+    
+    // -- Create HTML text
+    
+    if(is File loc = filePath.resource) {
+        loc.delete();
+    }
+        
+    if(is Nil loc = filePath.resource) {
+        File file = loc.createFile();
+        Writer writer = file.writer();
+        writer.write("<html><head>
+                      <style type=\"text/css\">
+                            .error {background-color:#FF183e;}
+                      </style>
+                      </head><body>");
+        writer.write("<h1>Example report</h1>");
+        
+        // write description
+        StringBuilder sb = StringBuilder();
+        DefaultDescriptorEnv descriptorEnv = DefaultDescriptorEnv();
+        value format = HtmlTextFormat();
+        description.appendTo(sb, format, 0, descriptorEnv);
+        
+        for(fn in descriptorEnv.footNotes()) {
+            format.writeText(sb, normalStyle, "Reference [``fn.reference``]:");
+            format.writeNewLineIndent(sb, 0);
+            fn.description.appendTo(sb, format, 0, descriptorEnv);
+        }
+        
+        
+        writer.write(sb.string);
+        
+        writer.write("</body></html>");
+        
+        writer.close(null);
+    }
+}
+
+void htmlExampleWithFootNotes() {
+
+    try {
+        assertThat([100, 11, [13, "<Hello>"]], Is([10, 11, [12, "<World>"]]), "Demo");
+        
+    } catch (MatchException e){
+        String? tmpPath = process.propertyValue("java.io.tmpdir");
+        assert(is String tmpPath);
+        writeHtmlFileWithFootNotes(parsePath(tmpPath).childPath("testReport.html"), e.mismatchDescription);
+    }
+}
+
+
