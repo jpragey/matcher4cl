@@ -27,9 +27,11 @@ void customDescriptorTest() {
         }
     }
     
-    class MyIs(Object? expected) extends Is (expected, defaultMatcherResolver({}, descriptor)){}
+    class MyIs(Object? expected) extends Is (expected/*, defaultMatcherResolver({}, descriptor)*/){}
     
-    assertThat(Complex(1.0, 0.1), MyIs(Complex(1.0, 0.0)));
+    assertThat(Complex(1.0, 0.1), MyIs(Complex(1.0, 0.0)), null, 
+        (Object? expected) => defaultMatcherResolver({}, descriptor)(expected)
+        );
 }
 
 // ---------------

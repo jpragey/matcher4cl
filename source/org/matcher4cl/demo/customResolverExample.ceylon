@@ -23,13 +23,12 @@ void customResolverTest() {
   
     value customResolver = defaultMatcherResolver({customMatcherResolver});
     
-    assertThat({User("Ted", 30), User("John", 20)}, 
+    assertThat(     {User("Ted", 30), User("John", 20)}, 
         ListMatcher({User("Ted", 30), User("John", 21)}), null, customResolver);
         
-    class MyIs(Object? expected) extends Is (expected, customResolver){}
     void myAssertThat(Object? actual, Matcher matcher, String? userMsg = null) =>
         assertThat(actual, matcher, userMsg ,customResolver    ); 
-    myAssertThat({User("Ted", 30)}, MyIs({User("John", 20)}));
+    myAssertThat({User("Ted", 30)}, Is({User("John", 20)}));
 }
 
 
@@ -69,7 +68,6 @@ void customResolverWithDescriptorTest() {
         case(is Phone) {return PhoneMatcher(expected);}
         else {return null;}
     }
-//    value customResolver = DefaultMatcherResolver({customResolver0}, customDescriptor);
     value customResolver = defaultMatcherResolver({customResolver0}, customDescriptor);
     
     assertThat({User("Ted", {Phone("00000")})}, 

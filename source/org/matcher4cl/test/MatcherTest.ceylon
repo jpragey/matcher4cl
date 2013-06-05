@@ -107,14 +107,6 @@ void objectMatcherTest() {
         dToS(objectMatcher.match(A("Ted", 30)).matchDescription));
 }
 
-void isMatcherTest() {
-    assertEquals("org.matcher4cl.core::EqualsMatcher", className(Is(42).matcher));
-    assertEquals("org.matcher4cl.core::EqualsMatcher", className(Is("Hello").matcher));
-    assertEquals("org.matcher4cl.core::ListMatcher", className(Is({"Hello", "World"}).matcher));
-    assertEquals("org.matcher4cl.core::ListMatcher", className(Is({}).matcher));
-    assertEquals("org.matcher4cl.core::MapMatcher", className(Is({"H" -> "Hello", "W" -> "World"}).matcher));
-}
-
 
 void allMatcherTest() {
 
@@ -295,7 +287,6 @@ void matcherTestSuite0() {
     listMatcherTest(); 
     mapMatcherTest();
     objectMatcherTest();
-    isMatcherTest();
     allMatcherTest();
     anyMatcherTest();
     notMatcherTest();
@@ -314,7 +305,6 @@ void matcherTestSuite() {
     testRunner.addTest("org.jpr.matchers.core::listMatcherTest", listMatcherTest); 
     testRunner.addTest("org.jpr.matchers.core::mapMatcherTest", mapMatcherTest);
     testRunner.addTest("org.jpr.matchers.core::objectMatcherTest", objectMatcherTest);
-    testRunner.addTest("org.jpr.matchers.core::isMatcherTest", isMatcherTest);
     testRunner.addTest("org.jpr.matchers.core::allMatcherTest", allMatcherTest);
     testRunner.addTest("org.jpr.matchers.core::anyMatcherTest", anyMatcherTest);
     testRunner.addTest("org.jpr.matchers.core::notMatcherTest", notMatcherTest);
