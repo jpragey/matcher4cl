@@ -26,7 +26,7 @@ shared interface Matcher {
         Object? actual,
         doc "Resolver: implementations may use it to get matcher for members. 
              Useful for somewhat generic class matchers, eg matchers for lists or maps."
-        MatcherResolver matcherResolver = DefaultMatcherResolver());
+        Matcher (Object? ) matcherResolver = defaultMatcherResolver());
     
     doc "Short one-line description, eg 'operator =='"
     shared formal Description description;
@@ -74,7 +74,7 @@ shared abstract class EqualsOpMatcher<T>(
          "
     shared actual MatcherResult match(Object? actual,
         
-        MatcherResolver matcherResolver) {
+        Matcher (Object? ) matcherResolver) {
         Boolean matched ;
         Description d;
         
@@ -176,7 +176,7 @@ shared class ListMatcher(
          "
     shared actual MatcherResult match(Object? actual,
         
-        MatcherResolver matcherResolver) {
+        Matcher (Object? ) matcherResolver) {
         MatcherResult result;
         
         if(is Iterable<Object?> actual) {
@@ -192,7 +192,7 @@ shared class ListMatcher(
             while(!is Finished a = actIt.next()) {
                 if(!is Finished e = expIt.next()) {
                     // -- Compare elements
-                    Matcher elemMatcher = matcherResolver.findMatcher(e);
+                    Matcher elemMatcher = matcherResolver(e);
                     MatcherResult mr = elemMatcher.match(a, matcherResolver);
                     
                     Boolean matched = mr.succeeded;
@@ -284,7 +284,7 @@ shared class MapMatcher<Key, Item>(
     doc "\"MapMatcher\""
     shared actual Description description = ValueDescription(normalStyle, "MapMatcher");
     
-    shared actual MatcherResult match(Object? actual, MatcherResolver matcherResolver) {
+    shared actual MatcherResult match(Object? actual, Matcher (Object? )  matcherResolver) {
         MatcherResult result;
         
         if(is Map<Key, Item> actual) {
@@ -309,7 +309,7 @@ shared class MapMatcher<Key, Item>(
             for(key in commonKeys) {
                 Item? actualItem = actual.get(key);
                 Item? expectedItem = expected.get(key);
-                Matcher itemMatcher = matcherResolver.findMatcher(expectedItem);
+                Matcher itemMatcher = matcherResolver(expectedItem);
                 
                 MatcherResult mr = itemMatcher.match(actualItem, matcherResolver);
                 
@@ -401,7 +401,7 @@ shared class ObjectMatcher<T> (
         return cn.split(":", true, true).last else cn;
     }
     
-    shared actual MatcherResult match(Object? actual, MatcherResolver matcherResolver) {
+    shared actual MatcherResult match(Object? actual, Matcher (Object? ) matcherResolver) {
         
         if(is T actual) {
             
@@ -456,7 +456,7 @@ shared class AllMatcher (
     doc "AllMatcher short description: \"All\""
     shared actual Description description = StringDescription(normalStyle/*error*/, "All"); 
     
-    shared actual MatcherResult match(Object? actual, MatcherResolver matcherResolver) {
+    shared actual MatcherResult match(Object? actual, Matcher (Object? ) matcherResolver) {
 
         variable value failureCount = 0;
         SequenceBuilder<Description> descrSb = SequenceBuilder<Description>(); 
@@ -493,7 +493,7 @@ shared class AnyMatcher (
     doc "AnyMatcher short description: \"Any\""
     shared actual Description description = StringDescription(normalStyle, "Any"); 
     
-    shared actual MatcherResult match(Object? actual, MatcherResolver matcherResolver) {
+    shared actual MatcherResult match(Object? actual, Matcher (Object? ) matcherResolver) {
 
         variable value failureCount = 0;
         SequenceBuilder<Description> descrSb = SequenceBuilder<Description>(); 
@@ -533,7 +533,7 @@ shared class NotMatcher (
     doc "NotMatcher short description: \"Not\""
     shared actual Description description = StringDescription(normalStyle/*error*/, "Not"); 
     
-    shared actual MatcherResult match(Object? actual, MatcherResolver matcherResolver) {
+    shared actual MatcherResult match(Object? actual, Matcher (Object? ) matcherResolver) {
    
         MatcherResult mr = matcher.match(actual, matcherResolver);
         ChildDescription childDescr = ChildDescription(matcher.description, mr.matchDescription);        
@@ -563,7 +563,7 @@ shared class AnythingMatcher (
     doc "AnythingMatcher short description: \"Anything\""
     shared actual Description description = StringDescription(normalStyle, "Anything"); 
     
-    shared actual MatcherResult match(Object? actual, MatcherResolver matcherResolver) {
+    shared actual MatcherResult match(Object? actual, Matcher (Object? ) matcherResolver) {
         
         Description descr = StringDescription(normalStyle, "Anything");
         MatcherResult result = MatcherResult(true, descr);
@@ -586,7 +586,7 @@ shared class DescribedAsMatcher (
     
     doc "Let the child matcher match `actual`; the result description is the concatenation
          of the prefix and the child match result description."
-    shared actual MatcherResult match(Object? actual, MatcherResolver matcherResolver) {
+    shared actual MatcherResult match(Object? actual, Matcher (Object? ) matcherResolver) {
    
         MatcherResult mr = matcher.match(actual, matcherResolver);
         Description d = CatDescription({prefix, mr.matchDescription});
@@ -612,7 +612,7 @@ shared class TypeMatcher<T> (
     doc "\"TypeMatcher\""
     shared actual Description description = StringDescription(normalStyle/*error*/, "TypeMatcher"); 
     
-    shared actual MatcherResult match(Object? actual, MatcherResolver matcherResolver) {
+    shared actual MatcherResult match(Object? actual, Matcher (Object? ) matcherResolver) {
 
         MatcherResult result;
 
@@ -651,17 +651,17 @@ shared class Is(
         doc "Expected value"
         Object? expected,
         doc "Resolver, used to get a matcher for `expected` value"
-        MatcherResolver resolver = DefaultMatcherResolver()
+        Matcher (Object? ) resolver = defaultMatcherResolver()
         ) satisfies Matcher {
     
     doc "The delegate matcher, given by `resolver` for the expected type value."
-    shared Matcher matcher = resolver.findMatcher(expected);
+    shared Matcher matcher = resolver(expected);
     
     doc "Short description, based on the delegate matcher short description."
     shared actual Description description = CatDescription{StringDescription(normalStyle, "Is: "), matcher.description};
     
     doc "Delegate matching to [[matcher]]."
-    shared actual MatcherResult match(Object? actual, MatcherResolver matcherResolver) {
+    shared actual MatcherResult match(Object? actual, Matcher (Object? ) matcherResolver) {
         return matcher.match(actual, matcherResolver);
     }
 }

@@ -1,4 +1,4 @@
-import org.matcher4cl.core{ assertThat, DefaultMatcherResolver, Is, Descriptor, DefaultDescriptor, Matcher, ObjectMatcher, MatcherResolver, FieldAdapter, EqualsMatcher, ListMatcher, ThrowingResultHandler, Description, StringDescription, TextStyle, normalStyle, CompoundDescription, FootNote, TreeDescription, DescriptorEnv }
+import org.matcher4cl.core{ assertThat, Is, Descriptor, DefaultDescriptor, Matcher, ObjectMatcher, FieldAdapter, EqualsMatcher, ListMatcher, ThrowingResultHandler, Description, StringDescription, TextStyle, normalStyle, CompoundDescription, FootNote, TreeDescription, DescriptorEnv, defaultMatcherResolver }
 import ceylon.collection { HashMap }
 
 
@@ -27,7 +27,7 @@ void customDescriptorTest() {
         }
     }
     
-    class MyIs(Object? expected) extends Is (expected, DefaultMatcherResolver({}, descriptor)){}
+    class MyIs(Object? expected) extends Is (expected, defaultMatcherResolver({}, descriptor)){}
     
     assertThat(Complex(1.0, 0.1), MyIs(Complex(1.0, 0.0)));
 }
@@ -92,7 +92,7 @@ Matcher? customMatcherResolver(Object? expected/*, MatcherResolver childrenMatch
 }
    
 // Resolver for everything
-MatcherResolver resolver = DefaultMatcherResolver({customMatcherResolver}, customDescriptor);
+    Matcher (Object? ) resolver = defaultMatcherResolver({customMatcherResolver}, customDescriptor);
 
     
 void testConfigFileWithFootnotes() {

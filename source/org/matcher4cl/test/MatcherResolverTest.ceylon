@@ -1,11 +1,11 @@
 import ceylon.test { assertEquals, TestRunner, PrintingTestListener }
-import org.matcher4cl.core{ DefaultMatcherResolver, MatcherResolver }
+import org.matcher4cl.core { defaultMatcherResolver }
 
 
 void matcherResolverTest() {
     String matcherClassName(Object? obj) {
-        MatcherResolver mr = DefaultMatcherResolver();
-        return className(mr.findMatcher(obj));
+        value mr = defaultMatcherResolver();
+        return className(mr(obj));
     }
     
     assertEquals("org.matcher4cl.core::EqualsMatcher", matcherClassName(""));

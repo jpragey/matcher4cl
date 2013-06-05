@@ -107,7 +107,7 @@ shared void assertThat(
     String? userMsg = null,
     
     doc "Resolver for values matching" 
-    MatcherResolver matcherResolver = DefaultMatcherResolver(),
+    Matcher (Object? ) matcherResolver = defaultMatcherResolver(),
 
     doc "The [[ResultHandler]] to use if matching failed." 
     ResultHandler resultHandler = ThrowingResultHandler()

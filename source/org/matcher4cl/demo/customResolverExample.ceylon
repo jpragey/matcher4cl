@@ -1,4 +1,4 @@
-import org.matcher4cl.core{ assertThat, EqualsMatcher, ObjectMatcher, Matcher, DefaultMatcherResolver, Is, ListMatcher, Descriptor, DefaultDescriptor, FieldAdapter, DescriptorEnv }
+import org.matcher4cl.core{ assertThat, EqualsMatcher, ObjectMatcher, Matcher, Is, ListMatcher, Descriptor, DefaultDescriptor, FieldAdapter, DescriptorEnv, defaultMatcherResolver }
 
 
 void customResolverTest() {
@@ -21,7 +21,7 @@ void customResolverTest() {
         return null;
     }
   
-    value customResolver = DefaultMatcherResolver({customMatcherResolver});
+    value customResolver = defaultMatcherResolver({customMatcherResolver});
     
     assertThat({User("Ted", 30), User("John", 20)}, 
         ListMatcher({User("Ted", 30), User("John", 21)}), null, customResolver);
@@ -70,7 +70,7 @@ void customResolverWithDescriptorTest() {
         else {return null;}
     }
 //    value customResolver = DefaultMatcherResolver({customResolver0}, customDescriptor);
-    value customResolver = DefaultMatcherResolver({customResolver0}, customDescriptor);
+    value customResolver = defaultMatcherResolver({customResolver0}, customDescriptor);
     
     assertThat({User("Ted", {Phone("00000")})}, 
         ListMatcher( {User("Ted", {Phone("00000"), Phone("00001")})}, customDescriptor), null, customResolver);
