@@ -1,4 +1,4 @@
-import org.matcher4cl.core{ assertThat, EqualsMatcher, ObjectMatcher, Matcher, DefaultMatcherResolver, Is, ListMatcher, OptionalMatcherResolver, Descriptor, DefaultDescriptor, FieldAdapter, DescriptorEnv }
+import org.matcher4cl.core{ assertThat, EqualsMatcher, ObjectMatcher, Matcher, DefaultMatcherResolver, Is, ListMatcher, Descriptor, DefaultDescriptor, FieldAdapter, DescriptorEnv }
 
 
 void customResolverTest() {
@@ -14,14 +14,13 @@ void customResolverTest() {
         FieldAdapter<User>("age", (User expected) => EqualsMatcher(expected.age), (User actual)=>actual.age)
     }) {}
     
-    object customMatcherResolver satisfies OptionalMatcherResolver {
-        shared actual Matcher? findMatcher(Object? expected/*, MatcherResolver childrenMatcherResolver*/) {
-            if(is User expected) {
-                return UserMatcher(expected);
-            }
-            return null;
+    Matcher? customMatcherResolver(Object? expected) {
+        if(is User expected) {
+            return UserMatcher(expected);
         }
+        return null;
     }
+  
     value customResolver = DefaultMatcherResolver({customMatcherResolver});
     
     assertThat({User("Ted", 30), User("John", 20)}, 
@@ -63,16 +62,15 @@ void customResolverWithDescriptorTest() {
         FieldAdapter<Phone>("nb", (Phone expected) => EqualsMatcher(expected.phoneNb), (Phone actual)=>actual.phoneNb)
     }) {}
     
-    class CustomResolver(Descriptor descriptor) satisfies OptionalMatcherResolver {
-        shared actual Matcher? findMatcher(Object? expected/*, MatcherResolver childrenMatcherResolver*/) {
-            
-            switch(expected)
-            case(is User) {return UserMatcher(expected, descriptor);}
-            case(is Phone) {return PhoneMatcher(expected);}
-            else {return null;}
-        }
+    Matcher? customResolver0(Object? expected) {
+        
+        switch(expected)
+        case(is User) {return UserMatcher(expected, customDescriptor);}
+        case(is Phone) {return PhoneMatcher(expected);}
+        else {return null;}
     }
-    value customResolver = DefaultMatcherResolver({CustomResolver(customDescriptor)}, customDescriptor);
+//    value customResolver = DefaultMatcherResolver({customResolver0}, customDescriptor);
+    value customResolver = DefaultMatcherResolver({customResolver0}, customDescriptor);
     
     assertThat({User("Ted", {Phone("00000")})}, 
         ListMatcher( {User("Ted", {Phone("00000"), Phone("00001")})}, customDescriptor), null, customResolver);

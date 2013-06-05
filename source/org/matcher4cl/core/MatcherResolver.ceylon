@@ -6,26 +6,15 @@ shared interface MatcherResolver {
     shared formal Matcher findMatcher(Object? expected);
 }
 
-doc "Find a 'suitable' matcher for a given expected object, if any.
-     It is typically used to with [[DefaultMatcherResolver]] to create custom matcher resolver:
-     `OptionalMatcherResolver` will check for custom objects matchers, 
-     and falls back to [[DefaultMatcherResolver]] for other objects. 
-     "
-see "DefaultMatcherResolver"     
-by "Jean-Pierre Ragey"
-shared interface OptionalMatcherResolver {
-    doc "Find a 'suitable' matcher for a given expected object.
-         Returns null if not found."
-    shared formal Matcher? findMatcher(Object? expected);
-}
-
-
 
 doc "Default `MatcherResolver`, use delegates (usually for custom matchers) and, if not found, a few default matchers."
 by "Jean-Pierre Ragey"
 shared class DefaultMatcherResolver(
-    doc "Delegates, will be asked first, in this order."
-    {OptionalMatcherResolver *} delegates = {},
+
+    doc "Delegate resolvers, will be asked first, in this order.
+         If any of then returns a Matcher, this matcher will be used."
+    {Matcher? (Object? ) *} delegates = {},
+    
     doc "The descriptor that will be passed to created Matchers."
     Descriptor descriptor = DefaultDescriptor()
     ) satisfies MatcherResolver 
@@ -42,7 +31,7 @@ shared class DefaultMatcherResolver(
     shared actual Matcher findMatcher(Object? expected) {
 
         for(d in delegates) {
-            if(exists m = d.findMatcher(expected)) {
+            if(exists m = d(expected)) {
                 return m; 
             }
         }

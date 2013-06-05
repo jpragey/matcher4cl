@@ -1,4 +1,4 @@
-import org.matcher4cl.core{ assertThat, DefaultMatcherResolver, Is, Descriptor, DefaultDescriptor, Matcher, OptionalMatcherResolver, ObjectMatcher, MatcherResolver, FieldAdapter, EqualsMatcher, ListMatcher, ThrowingResultHandler, Description, StringDescription, TextStyle, normalStyle, CompoundDescription, FootNote, TreeDescription, DescriptorEnv }
+import org.matcher4cl.core{ assertThat, DefaultMatcherResolver, Is, Descriptor, DefaultDescriptor, Matcher, ObjectMatcher, MatcherResolver, FieldAdapter, EqualsMatcher, ListMatcher, ThrowingResultHandler, Description, StringDescription, TextStyle, normalStyle, CompoundDescription, FootNote, TreeDescription, DescriptorEnv }
 import ceylon.collection { HashMap }
 
 
@@ -78,20 +78,19 @@ object customDescriptor satisfies Descriptor {
         return default.describe(obj, descriptorEnv);
     }
 }
-// Resolver for custom classes
-object customMatcherResolver satisfies OptionalMatcherResolver {
-   shared actual Matcher? findMatcher(Object? expected/*, MatcherResolver childrenMatcherResolver*/) {
-       // Add matchers for custom classes
-       if(is AppConfig expected) {
-           
-           return ObjectMatcher<AppConfig>(expected, {
-               // This FieldAdapter won't be really used here, as matching will fail on data *types*.
-               FieldAdapter<AppConfig>("name", (AppConfig expected) => EqualsMatcher(expected.appParam), (AppConfig actual)=>actual.appParam)
-           }, customDescriptor /*The right one*/);
-       }
-       return null;    // for other classes
-   }
+
+Matcher? customMatcherResolver(Object? expected/*, MatcherResolver childrenMatcherResolver*/) {
+    // Add matchers for custom classes
+    if(is AppConfig expected) {
+        
+        return ObjectMatcher<AppConfig>(expected, {
+            // This FieldAdapter won't be really used here, as matching will fail on data *types*.
+            FieldAdapter<AppConfig>("name", (AppConfig expected) => EqualsMatcher(expected.appParam), (AppConfig actual)=>actual.appParam)
+        }, customDescriptor /*The right one*/);
+    }
+    return null;    // for other classes
 }
+   
 // Resolver for everything
 MatcherResolver resolver = DefaultMatcherResolver({customMatcherResolver}, customDescriptor);
 

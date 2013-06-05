@@ -68,7 +68,7 @@ doc "Matcher library for Ceylon.
      - [[DescribedAsMatcher]] (decorating, adds a description message to another matcher description)
      - [[TypeMatcher]] (match types, currently incomplete, as ceylon 0.5 reflection/metaprogramming is inexistent)
      
-     ### Custom simple values matchers
+     ## Custom simple values matchers
      
      Sometime, for simple values, [[EqualMatcher]] is not enough; for example you might want to match Floats 
      within a certain margin of (rounding) error. The [[EqualsOpMatcher]] provides a simple solution for 'simple' values: it delegates
@@ -92,7 +92,7 @@ doc "Matcher library for Ceylon.
                    } else {
                        // Error message
                        return FormattedDescription(DefaultFormatter(\"== within {}% : \"),
-                           [relativeError*100], errorStyle);
+                           [relativeError*100], highlighted);
                    }
                },
                //
