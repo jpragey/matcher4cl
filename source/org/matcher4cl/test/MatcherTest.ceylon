@@ -1,5 +1,5 @@
 import ceylon.test { assertTrue, assertFalse, assertEquals, TestRunner, PrintingTestListener }
-import org.matcher4cl.core{ EqualsMatcher, ListMatcher, MapMatcher, ObjectMatcher, FieldAdapter, Is, AllMatcher, AnyMatcher, NotMatcher, TypeMatcher, DescribedAsMatcher, StringDescription, normalStyle, AnythingMatcher, NotNullMatcher, IdentifiableMatcher, EqualsOpMatcher, DefaultDescriptor, Descriptor, highlighted }
+import org.matcher4cl.core{ EqualsMatcher, ListMatcher, MapMatcher, ObjectMatcher, FieldAdapter, Is, AllMatcher, AnyMatcher, NotMatcher, TypeMatcher, DescribedAsMatcher, StringDescription, normalStyle, AnythingMatcher, NotNullMatcher, IdentifiableMatcher, EqualsOpMatcher, DefaultDescriptor, Descriptor, highlighted, StringMatcher }
 
 void equalsMatcherTest() {
     
@@ -281,6 +281,40 @@ void simpleValuesMatcherTest() {
     
 }
 
+void stringMatcherTest() {
+        
+    assertTrue(StringMatcher("Hello").match("Hello").succeeded);
+    assertTrue(StringMatcher("").match("").succeeded);
+
+    
+    assertTrue(StringMatcher("a").match("ab").failed());
+    assertEquals("\"a\"/\"ab\" Sizes: actual=2 != expected=1", 
+        dToS(StringMatcher("a").match("ab").matchDescription));
+
+    assertTrue(StringMatcher("ab").match("a").failed());
+    assertEquals("\"ab\"/\"a\" Sizes: actual=1 != expected=2", 
+        dToS(StringMatcher("ab").match("a").matchDescription));
+
+    assertTrue(StringMatcher("ab").match(null).failed());
+    assertEquals("ERR: non-null was expected: \"ab\"/<<<<null>>>>", 
+        dToS(StringMatcher("ab").match(null).matchDescription));
+
+    assertTrue(StringMatcher("ab").match(42).failed());
+    assertEquals("ERR: a String was expected, found ceylon.language::Integer: \"ab\"/<<<42>>>", 
+        dToS(StringMatcher("ab").match(42).matchDescription));
+
+    
+    assertFalse(StringMatcher("Hello").match("World").succeeded);
+    assertEquals("\"Hello\"/\"World\": expected[0]='H'(72=#48) != actual[0]='W'(87=#57)", 
+        dToS(StringMatcher("Hello").match("World").matchDescription));
+   
+    assertEquals("\"aaaHello\"/\"aaaWorld\": expected[3]='H'(72=#48) != actual[3]='W'(87=#57)", 
+        dToS(StringMatcher("aaaHello").match("aaaWorld").matchDescription));
+   
+    assertEquals("\"a b\"/\"a\{#00A0}b\": expected[1]=' '(32=#20) != actual[1]=' '(160=#a0)", // NB: #00A0 is nbsp 
+        dToS(StringMatcher("a b").match("a\{#00A0}b").matchDescription));
+}
+
 void matcherTestSuite0() {
     equalsMatcherTest();
     listMatcherTest(); 
@@ -294,6 +328,7 @@ void matcherTestSuite0() {
     typeMatcherTest();
     sameInstanceMatcherTest();
     simpleValuesMatcherTest();
+    stringMatcherTest();
 }
 
 void matcherTestSuite() {
@@ -313,6 +348,7 @@ void matcherTestSuite() {
     testRunner.addTest("org.jpr.matchers.core::sameInstanceMatcherTest", sameInstanceMatcherTest);
     testRunner.addTest("org.jpr.matchers.core::notNullMatcherTest", notNullMatcherTest);
     testRunner.addTest("org.jpr.matchers.core::simpleValuesMatcherTest", simpleValuesMatcherTest);
+    testRunner.addTest("org.jpr.matchers.core::stringMatcherTest", stringMatcherTest);
     
     testRunner.run();
     

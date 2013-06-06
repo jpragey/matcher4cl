@@ -110,6 +110,102 @@ shared abstract class EqualsOpMatcher<T>(
     }
 }
 
+by "Jean-Pierre Ragey"
+shared class StringMatcher(
+    doc "The expected value"
+    String expected, 
+    doc "Descriptor for actual values formatting"
+    Descriptor descriptor = DefaultDescriptor()
+    ) satisfies Matcher 
+{
+    
+    doc "Same content as constructor `equalsDescriptionString` parameter."
+    shared actual Description description(Matcher (Object? ) resolver) => StringDescription("StringMatcher");
+    
+    void appendHexChars(Integer i, StringBuilder sb) {
+        
+        if(i>15) {
+            appendHexChars(i/16, sb);
+        }
+        Character? c = "0123456789abcdef"[i%16];
+        assert (exists c);
+        sb.appendCharacter(c);
+    }
+    
+    String toHex(Character c) {
+        Integer i = c.integer;
+        StringBuilder sb = StringBuilder();
+        appendHexChars(c.integer, sb);
+        String s = sb.string;
+        return s;
+    }
+    
+    doc "Perform the match:
+         - succeeds if both actual/expected values are null;
+         - fails if only one is null;
+         - fails if `actual` is not a T or a subtype of T;
+         - if both are non-null, delegate matching to the `equals` constructor parameter. 
+         "
+    shared actual MatcherResult match(Object? actual,
+        
+        Matcher (Object? ) matcherResolver) {
+        Boolean matched ;
+        Description d;
+        
+            
+        if(is String actual) {
+            String expString = expected; 
+            String actString = actual; 
+            matched = expString == actString; 
+            if(matched) {
+                d = MatchDescription(null, normalStyle, expected, actual, descriptor);
+            } else {
+                
+                variable Description? failDescription = null;
+                if(actString.size != expString.size) {
+                    failDescription = StringDescription(" Sizes: actual=``actString.size`` != expected=``expString.size``"); 
+                } else {
+                    Iterator<Character> expIt = expString.iterator();
+                    Iterator<Character> actIt = actString.iterator();
+                    variable Integer index = 0;
+                    while(!is Finished a = actIt.next()) {
+                        if(!is Finished e = expIt.next()) {
+                            if(a != e) {
+                                
+                                failDescription = StringDescription(
+//                                  ": first different char at [``index``]: actual=\'``a``\'(``a.integer``=#``toHex(a)``) != expected=\'``e``\'(``e.integer``=#``toHex(a)``)");
+                                    ": expected[``index``]=\'``e``\'(``e.integer``=#``toHex(e)``) != actual[``index``]=\'``a``\'(``a.integer``=#``toHex(a)``)");
+                                break; 
+                            }
+                        }
+                        index++;
+                    }
+                }
+                
+                if(exists fd = failDescription) {
+                    d = CatDescription({MatchDescription(null, normalStyle, expected, actual, descriptor), fd});
+                } else {
+                    d = MatchDescription(null, normalStyle, expected, actual, descriptor);
+                    
+                }
+            }
+            
+        } else  {
+            matched = false;
+            Description fd;
+            if(exists actual){
+                fd = StringDescription("ERR: a String was expected, found ``className(actual)``: ", normalStyle);
+            } else {
+                fd = StringDescription("ERR: non-null was expected: ", normalStyle);
+            }
+            d = MatchDescription(fd, highlighted, expected, actual, descriptor);
+        }    
+          
+        return MatcherResult(matched, d);
+    }
+}
+
+
 doc "Matcher based on '==' comparison"
 by "Jean-Pierre Ragey"
 shared class EqualsMatcher(
