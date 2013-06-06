@@ -30,7 +30,7 @@ shared Matcher defaultMatcherResolver(
 
     // -- String (BEFORE collections, as String are lists of characters...)         
     if(is String expected) {
-        return StringMatcher(expected, descriptor);
+        return StringMatcher{expected=expected; descriptor=descriptor;};
     }
     
     // -- Collections of entries: MapMatcher

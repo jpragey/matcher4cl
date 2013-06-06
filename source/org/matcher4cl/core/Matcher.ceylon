@@ -110,10 +110,16 @@ shared abstract class EqualsOpMatcher<T>(
     }
 }
 
+doc "Matcher for String"
 by "Jean-Pierre Ragey"
 shared class StringMatcher(
     doc "The expected value"
-    String expected, 
+    String expected,
+    
+    doc "Converts actual and expected values before processing. For example, if you use `(String s) => s.uppercased`, 
+         matching will be case insensitive."
+    String(String) convert = (String s) => s,
+       
     doc "Descriptor for actual values formatting"
     Descriptor descriptor = DefaultDescriptor()
     ) satisfies Matcher 
@@ -133,7 +139,6 @@ shared class StringMatcher(
     }
     
     String toHex(Character c) {
-        Integer i = c.integer;
         StringBuilder sb = StringBuilder();
         appendHexChars(c.integer, sb);
         String s = sb.string;
@@ -154,8 +159,8 @@ shared class StringMatcher(
         
             
         if(is String actual) {
-            String expString = expected; 
-            String actString = actual; 
+            String expString = convert(expected); 
+            String actString = convert(actual); 
             matched = expString == actString; 
             if(matched) {
                 d = MatchDescription(null, normalStyle, expected, actual, descriptor);
@@ -173,7 +178,6 @@ shared class StringMatcher(
                             if(a != e) {
                                 
                                 failDescription = StringDescription(
-//                                  ": first different char at [``index``]: actual=\'``a``\'(``a.integer``=#``toHex(a)``) != expected=\'``e``\'(``e.integer``=#``toHex(a)``)");
                                     ": expected[``index``]=\'``e``\'(``e.integer``=#``toHex(e)``) != actual[``index``]=\'``a``\'(``a.integer``=#``toHex(a)``)");
                                 break; 
                             }
@@ -186,7 +190,6 @@ shared class StringMatcher(
                     d = CatDescription({MatchDescription(null, normalStyle, expected, actual, descriptor), fd});
                 } else {
                     d = MatchDescription(null, normalStyle, expected, actual, descriptor);
-                    
                 }
             }
             

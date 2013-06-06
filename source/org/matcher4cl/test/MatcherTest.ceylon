@@ -313,6 +313,13 @@ void stringMatcherTest() {
    
     assertEquals("\"a b\"/\"a\{#00A0}b\": expected[1]=' '(32=#20) != actual[1]=' '(160=#a0)", // NB: #00A0 is nbsp 
         dToS(StringMatcher("a b").match("a\{#00A0}b").matchDescription));
+   
+    // With conversion
+    assertFalse(StringMatcher("hello", (String s) => s.uppercased).match("he llo").succeeded);
+    assertTrue(StringMatcher("hello", (String s) => s.uppercased).match("hello").succeeded);
+    assertTrue(StringMatcher("hello", (String s) => s.uppercased).match("HELLO").succeeded);
+    assertTrue(StringMatcher("HELLO", (String s) => s.uppercased).match("hello").succeeded);
+   
 }
 
 void matcherTestSuite0() {
