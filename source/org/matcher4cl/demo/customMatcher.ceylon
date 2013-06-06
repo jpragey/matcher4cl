@@ -1,4 +1,4 @@
-import org.matcher4cl.core{ Descriptor, DefaultDescriptor, EqualsOpMatcher, FormattedDescription, DefaultFormatter, highlighted, assertThat }
+import org.matcher4cl.core{ Descriptor, DefaultDescriptor, EqualsOpMatcher, highlighted, assertThat, StringDescription }
 import java.lang { Math {pi = \iPI}}
 
 class FloatMatcher(
@@ -16,8 +16,7 @@ class FloatMatcher(
                return null;
            } else {
                // Error message
-               return FormattedDescription(DefaultFormatter("== within {}% : "),
-                   [relativeError*100], highlighted);
+               return StringDescription("== within ``relativeError*100``% : ", highlighted);
            }
        },
        //

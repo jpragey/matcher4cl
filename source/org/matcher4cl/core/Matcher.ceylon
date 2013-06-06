@@ -87,11 +87,11 @@ shared abstract class EqualsOpMatcher<T>(
                 
             } else if(exists actual){
                 matched = false;
-                Description fd = StringDescription( normalStyle, "ERR: ``className(expected)`` was expected, found ``className(actual)``: ");
+                Description fd = StringDescription("ERR: ``className(expected)`` was expected, found ``className(actual)``: ", normalStyle);
                 d = MatchDescription(fd, highlighted, expected, actual, descriptor);
             } else {
                 matched = false;
-                FormattedDescription fd = FormattedDescription(DefaultFormatter("ERR: non-null was expected: "), []);
+                Description fd = StringDescription("ERR: non-null was expected: ", normalStyle);
                 d = MatchDescription(fd, highlighted, expected, actual, descriptor);
             }
             
@@ -101,7 +101,7 @@ shared abstract class EqualsOpMatcher<T>(
             if(matched) {
                 d = MatchDescription(null, normalStyle, expected, actual, descriptor);
             } else {
-                FormattedDescription fd = FormattedDescription(DefaultFormatter("ERR: <null> was expected: "), []);
+                Description fd = StringDescription("ERR: <null> was expected: ", normalStyle);
                 d = MatchDescription(fd, matchStyle(matched), expected, actual, descriptor);
             }
         }
@@ -122,7 +122,7 @@ shared class EqualsMatcher(
         expected, 
         function (Object expected, Object actual) {
             if(expected == actual) {return null;} 
-            else {return StringDescription(normalStyle, "'=='");}
+            else {return StringDescription("'=='", normalStyle);}
          },
         "==",
         descriptor)
@@ -141,23 +141,12 @@ shared class IdentifiableMatcher(
         expected,
         function (Identifiable expected, Identifiable actual) {
             if(expected === actual) {return null;} 
-            else {return StringDescription(highlighted, "'==='");}
+            else {return StringDescription("'==='", highlighted);}
         },
         "===", 
         descriptor)
 {}
 
-by "Jean-Pierre Ragey"
-object matcherFormatters {
-    doc "Position in list prefix"
-    shared Formatter listPositionFmt = DefaultFormatter("At position {} ");   
-
-    shared Formatter mapValueMismatchFmt = DefaultFormatter("Value mismatch for ");   
-    shared Formatter allMatchersFailurePrefix = DefaultFormatter("AllMatcher: {} mismatch ({} matchers)");   
-    shared Formatter anyMatchersFailurePrefix = DefaultFormatter("AnyMatcher: no matcher succeeded ({} matchers)");   
-    shared Formatter notMatcherFailurePrefix = DefaultFormatter("NotMatcher: child matcher succeeded");   
-    
-}
 
 doc "Matcher for `Iterable` values."
 by "Jean-Pierre Ragey"
@@ -200,9 +189,9 @@ shared class ListMatcher(
                     
                     if(!matched) {  // Append element index
                         md = CatDescription{
-                            FormattedDescription(matcherFormatters.listPositionFmt, [index], highlighted /*error*/),
+                            StringDescription("At position ``index`` ", highlighted),
                             elemMatcher.description(matcherResolver),
-                            StringDescription(normalStyle, ": "),
+                            StringDescription(": "),
                             md
                         };   
                     }
@@ -233,11 +222,11 @@ shared class ListMatcher(
             Description? failureDescription;
             variable Boolean succeded = false;
             if(mismatchCount > 0) {
-                failureDescription = FormattedDescription(DefaultFormatter("{} mismatched:"), [mismatchCount]);
+                failureDescription = StringDescription("``mismatchCount`` mismatched:");
             } else if(! extraActualDescrSb.empty) {
-                failureDescription = FormattedDescription(DefaultFormatter("Actual list is longer than expected: {} expected, {} actual: "), [expected.size, actual.size]);
+                failureDescription = StringDescription("Actual list is longer than expected: ``expected.size`` expected, ``actual.size`` actual: ");
             } else if(! extraExpectedDescrSb.empty) {
-                failureDescription = FormattedDescription(DefaultFormatter("Expected list is longer than actual: {} expected, {} actual: "), [expected.size, actual.size]);
+                failureDescription = StringDescription("Expected list is longer than actual: ``expected.size`` expected, ``actual.size`` actual: ");
             } else {
                 failureDescription = null;
                 succeded = true;
@@ -249,13 +238,12 @@ shared class ListMatcher(
         } else if(exists actual){
             result = MatcherResult(false, 
                 CatDescription({ 
-                    StringDescription(highlighted, "An iterator was expected, found ``className(actual)``"),
-                    StringDescription(normalStyle, " value = "),
+                    StringDescription("An iterator was expected, found ``className(actual)``", highlighted),
+                    StringDescription(" value = ", normalStyle),
                     ValueDescription(normalStyle, actual, descriptor)
-                    //StringDescription(normalStyle, "]")
             }));
         } else {
-            result = MatcherResult(false, StringDescription(highlighted, "An iterator was expected, found null"));
+            result = MatcherResult(false, StringDescription("An iterator was expected, found null", highlighted));
         }
         
         return result;
@@ -318,9 +306,9 @@ shared class MapMatcher<Key, Item>(
                 
                 if(!matched) {
                     prefix = CatDescription{
-                        FormattedDescription(matcherFormatters.mapValueMismatchFmt, [], normalStyle),
-                                itemMatcher.description(matcherResolver),
-                                StringDescription(highlighted, ": ")
+                        StringDescription("Value mismatch for "),
+                        itemMatcher.description(matcherResolver),
+                        StringDescription(": ", highlighted)
                     };   
                 }
                 
@@ -337,11 +325,11 @@ shared class MapMatcher<Key, Item>(
             Description? failureDescription;
             variable Boolean succeded = false;
             if(mismatchCount > 0) {
-                failureDescription = FormattedDescription(DefaultFormatter("{} values mismatched:"), [mismatchCount]);
+                failureDescription = StringDescription("``mismatchCount`` values mismatched:");
             } else if(! extraActual.empty) {
-                failureDescription = FormattedDescription(DefaultFormatter("Actual map is longer than expected: {} expected, {} actual: "), [expected.size, actual.size]);
+                failureDescription = StringDescription("Actual map is longer than expected: ``expected.size`` expected, ``actual.size`` actual: ");
             } else if(! extraExpected.empty) {
-                failureDescription = FormattedDescription(DefaultFormatter("Expected map is longer than actual: {} expected, {} actual: "), [expected.size, actual.size]);
+                failureDescription = StringDescription("Expected map is longer than actual: ``expected.size`` expected, ``actual.size`` actual: ");
             } else {
                 failureDescription = null;
                 succeded = true;
@@ -351,9 +339,9 @@ shared class MapMatcher<Key, Item>(
             result = MatcherResult(succeded, ld);
             
         } else if(exists actual){
-            result = MatcherResult(false, StringDescription(highlighted, "A Map was expected, found ``className(actual)``"));
+            result = MatcherResult(false, StringDescription("A Map was expected, found ``className(actual)``", highlighted));
         } else {
-            result = MatcherResult(false, StringDescription(highlighted, "A Map was expected, found null"));
+            result = MatcherResult(false, StringDescription("A Map was expected, found null", highlighted));
         }
         
         return result;
@@ -394,7 +382,7 @@ shared class ObjectMatcher<T> (
         given T satisfies Object
 {
     doc "\"ObjectMatcher\" (subject to change, may include T name in future)"
-    shared actual Description description(Matcher (Object? ) resolver) => StringDescription(normalStyle/*error*/, "ObjectMatcher"); 
+    shared actual Description description(Matcher (Object? ) resolver) => StringDescription("ObjectMatcher", normalStyle); 
     
     String simpleClassName(Object obj) {
         String cn = className(obj); 
@@ -416,8 +404,8 @@ shared class ObjectMatcher<T> (
                 }
                 fieldDescrSb.append(ObjectFieldDescription(fieldMatcher.fieldName, fieldResult.matchDescription));
             }
-            Description prefix = StringDescription(matchStyle(succeeded), simpleClassName(expected));
-            ObjectDescription objectDescription = ObjectDescription (prefix, fieldDescrSb.sequence/*, descriptor*/);
+            Description prefix = StringDescription(simpleClassName(expected), matchStyle(succeeded));
+            ObjectDescription objectDescription = ObjectDescription (prefix, fieldDescrSb.sequence);
             
             return MatcherResult(succeeded, objectDescription);
             
@@ -439,7 +427,7 @@ Description wrongTypeDescription<T>(
         actualName = className(actual);
     }
     Description d = CatDescription({
-        StringDescription(highlighted, "A ``className(expected)`` was expected, found ``actualName``"),
+        StringDescription("A ``className(expected)`` was expected, found ``actualName``", highlighted),
         ValueDescription(highlighted, actual, descriptor)
     });
     
@@ -454,7 +442,7 @@ shared class AllMatcher (
         ) satisfies Matcher 
 {
     doc "AllMatcher short description: \"All\""
-    shared actual Description description(Matcher (Object? ) resolver) => StringDescription(normalStyle/*error*/, "All"); 
+    shared actual Description description(Matcher (Object? ) resolver) => StringDescription("All", normalStyle); 
     
     shared actual MatcherResult match(Object? actual, Matcher (Object? ) matcherResolver) {
         variable value failureCount = 0;
@@ -469,7 +457,7 @@ shared class AllMatcher (
         
         variable Description prefix;
         if(failureCount > 0) {
-            prefix = FormattedDescription(matcherFormatters.allMatchersFailurePrefix, [failureCount, matchers.size]);
+            prefix = StringDescription("AllMatcher: ``failureCount`` mismatch (``matchers.size`` matchers)");
         } else {
             prefix = description(matcherResolver);
         }
@@ -490,7 +478,7 @@ shared class AnyMatcher (
 {
     
     doc "AnyMatcher short description: \"Any\""
-    shared actual Description description(Matcher (Object? ) resolver) => StringDescription(normalStyle, "Any"); 
+    shared actual Description description(Matcher (Object? ) resolver) => StringDescription("Any"); 
     
     shared actual MatcherResult match(Object? actual, Matcher (Object? ) matcherResolver) {
 
@@ -511,7 +499,7 @@ shared class AnyMatcher (
         if(succeeded) {
             prefix = description(matcherResolver);
         } else {
-            prefix = FormattedDescription(matcherFormatters.anyMatchersFailurePrefix, [matchersSize]);
+            prefix = StringDescription("AnyMatcher: no matcher succeeded (``matchersSize`` matchers)");
         }
         
         CompoundDescription descr = CompoundDescription (prefix, descrSb.sequence/*, [], [], descriptor*/);
@@ -530,7 +518,7 @@ shared class NotMatcher (
 {
     
     doc "NotMatcher short description: \"Not\""
-    shared actual Description description(Matcher (Object? ) resolver) => StringDescription(normalStyle/*error*/, "Not"); 
+    shared actual Description description(Matcher (Object? ) resolver) => StringDescription("Not", normalStyle); 
     
     shared actual MatcherResult match(Object? actual, Matcher (Object? ) matcherResolver) {
    
@@ -543,7 +531,7 @@ shared class NotMatcher (
         if(succeeded) {
             prefix = description(matcherResolver);
         } else {
-            prefix = FormattedDescription(matcherFormatters.notMatcherFailurePrefix, []);
+            prefix = StringDescription("NotMatcher: child matcher succeeded");
         }
         
         CompoundDescription descr = CompoundDescription (prefix, [childDescr]/*, [], [], descriptor*/);
@@ -560,11 +548,11 @@ shared class AnythingMatcher (
 {
     
     doc "AnythingMatcher short description: \"Anything\""
-    shared actual Description description(Matcher (Object? ) resolver) => StringDescription(normalStyle, "Anything"); 
+    shared actual Description description(Matcher (Object? ) resolver) => StringDescription("Anything", normalStyle); 
     
     shared actual MatcherResult match(Object? actual, Matcher (Object? ) matcherResolver) {
         
-        Description descr = StringDescription(normalStyle, "Anything");
+        Description descr = StringDescription("Anything", normalStyle);
         MatcherResult result = MatcherResult(true, descr);
         return result;
     }
@@ -581,7 +569,7 @@ shared class DescribedAsMatcher (
         ) satisfies Matcher 
 {
     doc "short description: \"DescribedAs\""
-    shared actual Description description(Matcher (Object? ) resolver) => StringDescription(normalStyle, "DescribedAs"); 
+    shared actual Description description(Matcher (Object? ) resolver) => StringDescription("DescribedAs", normalStyle); 
     
     doc "Let the child matcher match `actual`; the result description is the concatenation
          of the prefix and the child match result description."
@@ -609,7 +597,7 @@ shared class TypeMatcher<T> (
         ) satisfies Matcher 
 {
     doc "\"TypeMatcher\""
-    shared actual Description description(Matcher (Object? ) resolver) => StringDescription(normalStyle/*error*/, "TypeMatcher"); 
+    shared actual Description description(Matcher (Object? ) resolver) => StringDescription("TypeMatcher", normalStyle); 
     
     shared actual MatcherResult match(Object? actual, Matcher (Object? ) matcherResolver) {
 
@@ -623,8 +611,7 @@ shared class TypeMatcher<T> (
                 actClassName = className(actual);
             }
             // TODO: find expected type (eg by metaprogramming) 
-//            FormattedDescription fd = FormattedDescription(DefaultFormatter("ERR: wrong type: found {}: "), [actClassName]);
-            Description fd = StringDescription(normalStyle, "ERR: wrong type: found ``actClassName``: ");
+            Description fd = StringDescription("ERR: wrong type: found ``actClassName``: ", normalStyle);
             result = MatcherResult(false, CatDescription{
                 fd, 
                 ValueDescription(highlighted, actual, descriptor)
@@ -654,7 +641,7 @@ shared class Is(
     doc "Short description, based on the delegate matcher short description."
     shared actual Description description(Matcher (Object? ) resolver) => 
         CatDescription{
-            StringDescription(normalStyle, "Is: "), 
+            StringDescription("Is: ", normalStyle), 
             resolver(expected).description(resolver)
         };
     

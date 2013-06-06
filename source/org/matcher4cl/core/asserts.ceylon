@@ -40,7 +40,6 @@ shared class ThrowingResultHandler(
         sb.append(prefix);
         description.appendTo(sb, writer, indentCount, descriptorEnv);
         
-//        String msg = sb.string;
         return sb;
     }
     

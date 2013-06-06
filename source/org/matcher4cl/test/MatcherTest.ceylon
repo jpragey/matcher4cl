@@ -1,5 +1,5 @@
 import ceylon.test { assertTrue, assertFalse, assertEquals, TestRunner, PrintingTestListener }
-import org.matcher4cl.core{ EqualsMatcher, ListMatcher, MapMatcher, ObjectMatcher, FieldAdapter, Is, AllMatcher, AnyMatcher, NotMatcher, TypeMatcher, DescribedAsMatcher, StringDescription, normalStyle, AnythingMatcher, NotNullMatcher, IdentifiableMatcher, FormattedDescription, DefaultFormatter, EqualsOpMatcher, DefaultDescriptor, Descriptor, highlighted }
+import org.matcher4cl.core{ EqualsMatcher, ListMatcher, MapMatcher, ObjectMatcher, FieldAdapter, Is, AllMatcher, AnyMatcher, NotMatcher, TypeMatcher, DescribedAsMatcher, StringDescription, normalStyle, AnythingMatcher, NotNullMatcher, IdentifiableMatcher, EqualsOpMatcher, DefaultDescriptor, Descriptor, highlighted }
 
 void equalsMatcherTest() {
     
@@ -167,13 +167,13 @@ void anythingMatcherTest() {
 
 void describedAsMatcherTest() {
     
-    assertFalse(DescribedAsMatcher(StringDescription(normalStyle, "Response: "), EqualsMatcher(42)).match(null).succeeded);
+    assertFalse(DescribedAsMatcher(StringDescription("Response: "), EqualsMatcher(42)).match(null).succeeded);
     assertEquals("Response: ERR: non-null was expected: 42/<<<<null>>>>", 
-        dToS(DescribedAsMatcher(StringDescription(normalStyle, "Response: "), EqualsMatcher(42)).match(null).matchDescription));
+        dToS(DescribedAsMatcher(StringDescription("Response: "), EqualsMatcher(42)).match(null).matchDescription));
     
-    assertTrue(DescribedAsMatcher(StringDescription(normalStyle, "Response: "), EqualsMatcher(42)).match(42).succeeded);
+    assertTrue(DescribedAsMatcher(StringDescription("Response: "), EqualsMatcher(42)).match(42).succeeded);
     assertEquals("Response: 42", 
-        dToS(DescribedAsMatcher(StringDescription(normalStyle, "Response: "), EqualsMatcher(42)).match(42).matchDescription));
+        dToS(DescribedAsMatcher(StringDescription("Response: "), EqualsMatcher(42)).match(42).matchDescription));
 }
 
 class A<T>() {
@@ -265,8 +265,7 @@ void simpleValuesMatcherTest() {
                 return null;
             } else {
                 // Error message
-                return FormattedDescription(DefaultFormatter("== within {}% : "), 
-                    [relativeError*100], highlighted);
+                return StringDescription("== within ``relativeError*100``% : ", highlighted);
             }
         },
         "== within ``expected`` ", 

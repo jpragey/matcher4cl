@@ -26,8 +26,7 @@ void customDescriptorTest() {
             return default.describe(obj, descriptorEnv);
         }
     }
-    
-    class MyIs(Object? expected) extends Is (expected/*, defaultMatcherResolver({}, descriptor)*/){}
+    class MyIs(Object? expected) extends Is (expected){}
     
     assertThat(Complex(1.0, 0.1), MyIs(Complex(1.0, 0.0)), null, 
         (Object? expected) => defaultMatcherResolver({}, descriptor)(expected)
@@ -57,7 +56,7 @@ void poorTestConfigFile() {    // Message is '=='org.matcher4cl.demo.AppConfig@7
 // Create a (tree) description for an error.
 // NB: should be locale to customDescriptor.describe(), but ceylon bugs here.
 Description describeErrorTree(Error error) {
-    Description d = StringDescription(normalStyle, error.msg);
+    Description d = StringDescription(error.msg);
     if(error.causes.empty) {
         return d;
     } else {
@@ -81,7 +80,7 @@ object customDescriptor satisfies Descriptor {
     }
 }
 
-Matcher? customMatcherResolver(Object? expected/*, MatcherResolver childrenMatcherResolver*/) {
+Matcher? customMatcherResolver(Object? expected) {
     // Add matchers for custom classes
     if(is AppConfig expected) {
         

@@ -86,8 +86,8 @@ shared class ValueDescription(
 doc "Description consisting in a simple String."
 by "Jean-Pierre Ragey"
 shared class StringDescription(
-    TextStyle textStyle, 
-    String val
+    String val,
+    TextStyle textStyle = normalStyle 
 ) satisfies Description {
 
     shared actual Integer level = 0;
@@ -180,25 +180,6 @@ shared class MatchDescription(
     }
 }
 
-doc "Description consisting of a formatted message (including parameters). Formatting is delegated to a `Formatter`."
-by "Jean-Pierre Ragey"
-shared class FormattedDescription(
-    doc "The formatter" 
-    Formatter formatter,
-    doc "The formatter parameters"
-    [Object *] parameters,
-    doc "Text style"
-    TextStyle textStyle = normalStyle
-    ) satisfies Description {
-    
-    doc "Level is always 0."
-    shared actual Integer level = 0;
-    
-    shared actual void appendTo(StringBuilder stringBuilder, TextFormat textFormat, Integer depth, DescriptorEnv descriptorEnv) {
-        String s = formatter.toString(parameters, descriptorEnv);
-        textFormat.writeText(stringBuilder, textStyle, s);
-    }
-}
 
 
 doc "Description with children (lists, maps, objects, etc).
@@ -217,8 +198,6 @@ shared class CompoundDescription(
     doc "Nodes at levels higher than `singleLineLevel` will be written on several lines (if the text format allows it)."
     Integer singleLineLevel = 1
 ) satisfies Description {
-    Formatter extraExpectedFormatter = DefaultFormatter(" => ERR {} expected not in actual list: ");
-    Formatter extraActualFormatter = DefaultFormatter(  " => ERR {} actual not in expected list: ");
     
     shared actual Integer level = max{maxLevel(commonElementDescrs), maxLevel(extraExpectedDescrs), maxLevel(extraActualDescrs)} + 1;
     
@@ -255,10 +234,10 @@ shared class CompoundDescription(
         textFormat.writeText(stringBuilder, normalStyle, "}");
     }
 
-    void writeOptList([Description*] descrs, StringBuilder stringBuilder, TextFormat textFormat, Formatter formatter, Integer depth, DescriptorEnv descriptorEnv) {
+    void writeOptList([Description*] descrs, StringBuilder stringBuilder, TextFormat textFormat, Description description/* Formatter formatter*/, Integer depth, DescriptorEnv descriptorEnv) {
         if(nonempty descrs) {
             textFormat.writeNewLineIndent(stringBuilder, depth);
-            appendList(stringBuilder, textFormat, FormattedDescription(formatter, [descrs.size]), descrs, depth, descriptorEnv);
+            appendList(stringBuilder, textFormat, description, descrs, depth, descriptorEnv);
         }    
     }
     
@@ -267,8 +246,8 @@ shared class CompoundDescription(
         appendList(stringBuilder, descriptionWriter, prefixDescription, commonElementDescrs, depth, descriptorEnv);
 
         // -- Extra expected elements
-        writeOptList(extraExpectedDescrs, stringBuilder, descriptionWriter, extraExpectedFormatter, depth, descriptorEnv);
-        writeOptList(extraActualDescrs, stringBuilder, descriptionWriter, extraActualFormatter, depth, descriptorEnv);
+        writeOptList(extraExpectedDescrs, stringBuilder, descriptionWriter, StringDescription(" => ERR ``extraExpectedDescrs.size`` expected not in actual list: "), depth, descriptorEnv);
+        writeOptList(extraActualDescrs, stringBuilder, descriptionWriter, StringDescription(" => ERR ``extraActualDescrs.size`` actual not in expected list: "), depth, descriptorEnv);
     }
 }
 
