@@ -75,7 +75,7 @@ shared class ThrowingResultHandler(
                     textFormat.writeNewLineIndent(stringBuilder, 0 /*indentCount*/);
                     String refLine = stringBuilder.string;
                     
-                    StringBuilder footnoteMsg = createMessage(textFormat, footnode.description, refLine, DefaultDescriptorEnv() /*not used*/, 1);
+                    StringBuilder footnoteMsg = createMessage(textFormat, footnode.description, refLine, DefaultDescriptorEnv() /*not used*/, 0);
                     textFormat.writeNewLineIndent(footnoteMsg, 0 /*indentCount*/);
                     
                     printer(footnoteMsg.string);
@@ -101,12 +101,13 @@ shared void assertThat(
     doc "The matcher"
     Matcher matcher,
 
-    doc "A short message that may be included in the result, if matching failed. 
-         It typically describes the object to assert."
-    String? userMsg = null,
     
     doc "Resolver for values matching" 
     Matcher (Object? ) matcherResolver = defaultMatcherResolver(),
+    
+    doc "A short message that may be included in the result, if matching failed. 
+         It typically describes the object to assert."
+    String? userMsg = null,
 
     doc "The [[ResultHandler]] to use if matching failed." 
     ResultHandler resultHandler = ThrowingResultHandler()

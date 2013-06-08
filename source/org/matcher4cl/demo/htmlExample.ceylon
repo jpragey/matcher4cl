@@ -1,5 +1,5 @@
 import ceylon.file { File, Nil, Writer, Path, parsePath }
-import org.matcher4cl.core{ TextFormat, TextStyle, highlighted, assertThat, MatchException, Is, Description, DescriptorEnv, DefaultDescriptorEnv, normalStyle }
+import org.matcher4cl.core{ TextFormat, TextStyle, highlighted, assertThat, MatchException, Is, Description, DescriptorEnv, DefaultDescriptorEnv, normalStyle, EqualsMatcher }
 import ceylon.collection { HashMap }
     
 class HtmlTextFormat() satisfies TextFormat {
@@ -55,7 +55,9 @@ void writeHtmlFile(Path filePath, Description description) {
         // write description
         StringBuilder sb = StringBuilder();
         DescriptorEnv descriptorEnv = DefaultDescriptorEnv();
-        description.appendTo(sb, HtmlTextFormat(), 0, descriptorEnv);
+        value format = HtmlTextFormat();
+        description.appendTo(sb, format, 0, descriptorEnv);
+
         writer.write(sb.string);
         
         writer.write("</body></html>");
@@ -68,7 +70,7 @@ void writeHtmlFile(Path filePath, Description description) {
 void htmlExample() {
 
     try {
-        assertThat([100, 11, [13, "<Hello>"]], Is([10, 11, [12, "<World>"]]), "Demo");
+        assertThat([100, 11, [13, "<Hello>"]], Is([10, 11, [12, "<World>"]]));
         
     } catch (MatchException e){
         String? tmpPath = process.propertyValue("java.io.tmpdir");
@@ -102,6 +104,8 @@ void writeHtmlFileWithFootNotes(Path filePath, Description description) {
         description.appendTo(sb, format, 0, descriptorEnv);
         
         for(fn in descriptorEnv.footNotes()) {
+            format.writeNewLineIndent(sb, 0);
+            format.writeNewLineIndent(sb, 0);
             format.writeText(sb, normalStyle, "Reference [``fn.reference``]:");
             format.writeNewLineIndent(sb, 0);
             fn.description.appendTo(sb, format, 0, descriptorEnv);
@@ -119,8 +123,9 @@ void writeHtmlFileWithFootNotes(Path filePath, Description description) {
 void htmlExampleWithFootNotes() {
 
     try {
-        assertThat([100, 11, [13, "<Hello>"]], Is([10, 11, [12, "<World>"]]), "Demo");
-        
+        //assertThat([100, 11, [13, "<Hello>"]], Is([10, 11, [12, "<World>"]]));
+         assertThat(parseConfigFile(), EqualsMatcher(AppConfig("param"), customDescriptor));
+         
     } catch (MatchException e){
         String? tmpPath = process.propertyValue("java.io.tmpdir");
         assert(is String tmpPath);

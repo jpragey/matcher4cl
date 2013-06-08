@@ -4,10 +4,9 @@ import ceylon.collection { HashMap }
 
 void customDescriptorTest() {
     // Class under test
-    class Complex(re, im) {
-        shared Float re; 
-        shared Float im;
-        // Simple matching: DefaultMatcherResolver returns an EqualMatcher for unknown objects: 
+    class Complex(shared Float re, shared Float im) {
+        // Simple matching: defaultMatcherResolver returns an EqualMatcher 
+        // (which calls equals()) for unknown objects: 
         shared actual Boolean equals(Object that) {
             if(is Complex that) {
                 return re == that.re && im == that.im;
@@ -26,14 +25,24 @@ void customDescriptorTest() {
             return default.describe(obj, descriptorEnv);
         }
     }
-    class MyIs(Object? expected) extends Is (expected){}
     
-    assertThat(Complex(1.0, 0.1), MyIs(Complex(1.0, 0.0)), null, 
-        (Object? expected) => defaultMatcherResolver({}, descriptor)(expected)
-        );
+    //assertThat(Complex(1.0, 0.1), Is(Complex(1.0, 0.0)), 
+    //    (Object? expected) => defaultMatcherResolver({}, descriptor)(expected)
+    //    );
+    
+    value resolver = (Object? expected) => defaultMatcherResolver({}, descriptor)(expected);
+    void myAssertThat(Object? actual, Matcher matcher, String? userMsg = null) =>
+        assertThat(actual, matcher, resolver, userMsg); 
+
+    myAssertThat(Complex(1.0, 0.1), Is(Complex(1.0, 0.0)));
+    
+    
 }
 
-// ---------------
+// **********************************************************************************
+// *                                    FootNotes                                   * 
+// **********************************************************************************
+
 class Error(shared String msg, shared {Error*} causes = {}) {}
 class AppConfig(shared String appParam/*application configuration here*/) {}
 AppConfig|Error parseConfigFile(/*file path omitted for brevity*/) {
@@ -53,7 +62,7 @@ void poorTestConfigFile() {    // Message is '=='org.matcher4cl.demo.AppConfig@7
 
 // -- Test with custom descriptor
 
-// Create a (tree) description for an error.
+// Convert an error tree to a TreeDescription.
 // NB: should be locale to customDescriptor.describe(), but ceylon bugs here.
 Description describeErrorTree(Error error) {
     Description d = StringDescription(error.msg);

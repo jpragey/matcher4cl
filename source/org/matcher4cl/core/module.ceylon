@@ -7,17 +7,20 @@ doc "Matcher library for Ceylon.
      So let's go:
      
          import org.matcher4cl.core { assertThat, Is }
-     
          void doTest() {
-            assertThat(\"Hello\", Is(\"World\"), \"Some test\");
+            assertThat (\"The actual value\", Is(\"The expected one\"));
          }
      
      Run it as a usual ceylon application, and you'll get  an exception stating:
-         Some test: '=='\"World\"/<<<\"Hello\">>>
-     '==' is the comparator that was selected ('==' is used by default for strings); it is followed by an expected/actual value pair,
-     where actual is surrounded by '&lt;&lt;&lt; &gt;&gt;&gt;' if matching failed.
+         \"The expected one\"/<<<\"The actual value\">>>: expected[4]='e'(101=#65) != actual[4]='a'(97=#61)
      
+     The \"&lt;&lt;&lt; &gt;&gt;&gt;\" is ASCII art for highlighting; the string matcher describe the first mismatching character, convenient 
+     for differentiating non conventional chars (eg space (#20) and non-breaking space (#A0)).  
+      
      In Eclipse, you can run it as a usual Ceylon test, if the ceylon test plugin is installed.
+     
+     The basic usage pattern consists in writing all customizations once, and just use \"assertThat (actual, Is(expected));\" for all tests;
+     see the \"Organizing tests\" section.
      
      Under the hood:
      - `assertThat()` get an optionnal user message, the value to match (of type `Object?`), and a `Matcher`, that will check the value;
@@ -38,20 +41,21 @@ doc "Matcher library for Ceylon.
      The `Matcher` implementations match actual object against specific values:  
      
          shared interface Matcher {
-            shared formal Description description;
-            shared formal MatcherResult match(Object? actual,
-                MatcherResolver matcherResolver = DefaultMatcherResolver());
+            shared formal Description description(Matcher (Object? ) resolver);
+            shared formal MatcherResult match(Object? actual, 
+                Matcher (Object? ) resolver = defaultMatcherResolver());
          }
-    
-     - `description` is a short matcher description (typically less than one line). It is used inside other descriptions, for example 
-     when a matcher depends on other matchers (eg `AnyMatcher`);
      
-     - `match(Object? actual, MatcherResolver matcherResolver)` does the real job; the resulting `MatcherResult` 
-        is a matched/mismatched boolean, plus a description of what happened. We'll see [[MatcherResolver]] role later.
+     - `description()` is a short matcher description (typically less than one line). It is used inside other descriptions, for example 
+     when a matcher depends on other matchers (eg [[AnyMatcher]]);
      
-     The expected value is typically a constructor argument.
+     - `match(Object? actual, Matcher (Object? ) resolver)` does the real job; the resulting `MatcherResult` 
+        is a matched/mismatched boolean, plus a description of what happened.  
      
-     This `Description` may be typically:
+     Both methods have a `Matcher (Object? ) resolver` argument; it can be used if the matcher delegates its job to another matcher
+     (eg [[Is]]); See the Resolver chapter for more. 
+     
+     The `Description` field of the `MatcherResult` returned by `match()`may be typically:
      - a `MatchDescription`, for simple values (eg integers or strings);
      - some `CompoundDescription`, for complex objects (lists, maps, custom objects);
      - any kind of description, eg if actual object type is not the expected one.
@@ -61,6 +65,7 @@ doc "Matcher library for Ceylon.
      - [[Is]], the swiss knife of matchers: it delegates matching to a suitable matcher, 
        depending on the expected object type (see [[DefaultMatcherResolver]] doc); 
      - [[EqualsMatcher]] (uses ==), [[IdentifiableMatcher]] (uses ===), [[NotNullMatcher]]; 
+     - [[StringMatcher]] (uses ==); 
      - [[ListMatcher]], [[MapMatcher]] for (surprise) lists and maps; 
      - [[ObjectMatcher]], [[FieldAdapter]], for custom class matching (see later)
      - logical matchers: [[AllMatcher]] (all children matchers must match), [[AnyMatcher]] (any child matcher must match), 
@@ -91,8 +96,7 @@ doc "Matcher library for Ceylon.
                        return null;
                    } else {
                        // Error message
-                       return FormattedDescription(DefaultFormatter(\"== within {}% : \"),
-                           [relativeError*100], highlighted);
+                       return StringDescription(\"== within \``relativeError*100\``% : \", highlighted);
                    }
                },
                //
@@ -138,59 +142,55 @@ doc "Matcher library for Ceylon.
      when matching lists or maps, there should be a way to specify element matchers. Generics may help in simple cases,
      but not for lists of lists of custom objects containing maps of...
      
-     Suitable Matchers resolution can be delegated to [[MatcherResolver]] and [[OptionalMatcherResolver]], which can be customized, and used by many matchers:  
+     Basically creating matchers (what we call 'resolution') is delegated to functions of signature `Matcher (Object? expected)` or `Matcher? (Object? expected)`. 
+     They get some expected value, and return some suitable matcher. For example, if expected is a String, it would typically return a [[StringMatcher]] instance.
      
-         shared interface MatcherResolver {
-            shared formal Matcher findMatcher(Object? expected);
-         }
-         shared interface OptionalMatcherResolver {
-            shared formal Matcher? findMatcher(Object? expected);
-         }
-         
-     The only difference is that `OptionalMatcherResolver.findMatcher()` may return null if no suitable resolver was found, 
-     whereas `MatcherResolver.findMatcher()` *must* return a value. The idea is that a `MatcherResolver` may delegate resolution
-     to custom `OptionalMatcherResolver`(s), and provides its own Matcher if they didn't find anything. And - guess what - 
-     that's exactly what `DefaultMatcherResolver` does:
-     
-         shared class DefaultMatcherResolver(
-            {OptionalMatcherResolver *} delegates = {},
-            Descriptor descriptor = DefaultDescriptor()
-         ) satisfies MatcherResolver  {...}
-
-     [[DefaultMatcherResolver]] provides an implementation for usual classes (nulls, Objects (using '=='), Iterables...). 
+     The [[defaultMatcherResolver]] function creates a resolver that tries a list of delegate resolvers (for custom classes), and, if no matcher was found, 
+     returns a predefined matcher. It has matchers for usual classes (iterables, maps, strings), and falls back to an '==' based matcher. 
      
      So let's see it in action with previous `User` custom object, by comparing lists of users: first define a custom resolver:
      
-            // Return a UserMatcher if expected object is a User
-            object customMatcherResolver satisfies OptionalMatcherResolver {
-                shared actual Matcher? findMatcher(Object? expected) {
-                    if(is User expected) {
-                        return UserMatcher(expected);
-                    }
-                    return null;
+         void customResolverTest() {
+            // Class under test
+            class User(shared String name, shared Integer age) {}
+            
+            // Our custom matcher (the same)
+            class UserMatcher(User user) extends ObjectMatcher<User>(user, {
+                FieldAdapter<User>(\"name\", (User expected) => EqualsMatcher(expected.name), (User actual)=>actual.name),
+                FieldAdapter<User>(\"age\", (User expected) => EqualsMatcher(expected.age), (User actual)=>actual.age)
+            }) {}
+            
+            // Our custom resolver, returns null if expected if not a User
+            Matcher? customMatcherResolver(Object? expected) {
+                if(is User expected) {
+                    return UserMatcher(expected);
                 }
+                return null;
             }
-            value customResolver = DefaultMatcherResolver({customMatcherResolver});
+          
+            // Our custom resolver, returns default matchers if expected if not a User
+            value customResolver = defaultMatcherResolver({customMatcherResolver});
+            
+            // Fire!
+            assertThat(     {User(\"Ted\", 30), User(\"John\", 20)}, 
+                ListMatcher({User(\"Ted\", 30), User(\"John\", 21)}), customResolver);
+         }
+     
+     Result:
+     
+            1 mismatched: {
+              User {name: (\"Ted\"), age: (30)}, 
+              <<<At position 1 >>>ObjectMatcher: <<<User>>> {name: (\"John\"), age: ('=='21/<<<20>>>)}
+            }
+          
+     We can also use it for `Is()`; it's convenient to define a custom 'assertThat' that use `customResolver`:
 
-     Now we can compare user lists:
-     
-         assertThat({User(\"Ted\", 30), User(\"John\", 20)}, 
-            ListMatcher({User(\"Ted\", 30), User(\"John\", 21)}), null, customResolver);
-     
-     It results in an error message:
-         `1 mismatched: {
-            User {name: (\"Ted\"), age: (30)}, 
-            <<<At position 1 >>>ObjectMatcher: <<<User>>> {name: (\"John\"), age: ('=='21/<<<20>>>)}
-         }`
-     
-     We can also use it for `Is()`; it's convenient to define custom 'Is' and 'assertThat' that use `customResolver`:
-
-         class MyIs(Object? expected) extends Is (expected, customResolver){}
          void myAssertThat(Object? actual, Matcher matcher, String? userMsg = null) =>
-            assertThat(actual, matcher, userMsg ,customResolver);
+            assertThat(actual, matcher, customResolver, userMsg);
       
-         myAssertThat({User(\"Ted\", 30)}, MyIs({User(\"John\", 20)}));
-
+         myAssertThat({User(\"Ted\", 30)}, Is({User(\"John\", 20)}));
+                                                        
+     
      # Descriptors
      
      When generating description messages, you may need to customize the way classes are printed.
@@ -201,16 +201,19 @@ doc "Matcher library for Ceylon.
          shared interface Descriptor {
             shared formal String describe(Object? obj, DescriptorEnv descriptorEnv);
          }
-     Usually, descriptor default to [[DefaultDescriptor]].
+         // Ignore DescriptorEnv for the moment, we'll see it in the section on footnotes
+         shared interface DescriptorEnv {
+            shared formal FootNote newFootNote(Description description);
+         }
+
+     Usually, descriptor defaults to [[DefaultDescriptor]].
      
      For example suppose you need to match complex numbers: 
        
          void customDescriptorTest() {
             // Class under test
-            class Complex(re, im) {
-                shared Float re; 
-                shared Float im;
-                // Simple matching: DefaultMatcherResolver returns an EqualMatcher 
+            class Complex(shared Float re, shared Float im) {
+                // Simple matching: defaultMatcherResolver returns an EqualMatcher 
                 //(which calls equals()) for unknown objects: 
                 shared actual Boolean equals(Object that) { 
                     if(is Complex that) {
@@ -229,10 +232,12 @@ doc "Matcher library for Ceylon.
                     return default.describe(obj, descriptorEnv);
                 }
             }
-            // Custom Is(), to simplify assertions 
-            class MyIs(Object? expected) extends Is (expected, DefaultMatcherResolver({}, descriptor)){}
-    
-            assertThat(null, Complex(1.0, 0.1), MyIs(Complex(1.0, 0.0)));
+            // Customize assertThat() 
+            value resolver = (Object? expected) => defaultMatcherResolver({}, descriptor)(expected);
+            void myAssertThat(Object? actual, Matcher matcher, String? userMsg = null) =>
+                assertThat(actual, matcher, resolver, userMsg); 
+        
+            myAssertThat(Complex(1.0, 0.1), Is(Complex(1.0, 0.0)));
          }
      
      The assertion will print:
@@ -240,7 +245,7 @@ doc "Matcher library for Ceylon.
      
      ### Long descriptions: footnotes
      
-     If an object is too complex, its description may be lengthy, and may lead to hardly readable message.
+     If an object is too complex (eg a tree), its description may be lengthy, and may lead to hardly readable message.
      Matcher4cl provides a footnote mechanism, in which long descriptions may be deferred to the end of mismatch description: 
      - a descriptor creates a `Description` for the long message (as long as needed, eg using [[TreeDescription]]s);
      - it creates a new [[FootNote]] by `DescriptorEnv.newFootNote(Description)`;
@@ -264,11 +269,11 @@ doc "Matcher library for Ceylon.
                         })}); 
          }
   
-     Embedding all messages in the short messages would be cumberstone, so we choose to write only the first one 
+     Embedding all messages in the short messages would be cumberstone, so we choose to write only the first one in the mismatch description
      and dump the whole tree in a footnote. We first need to convert an `Error` to a Description; as Error is a basically a tree,
      we use [[TreeDescription]]s and [[StringDescription]]s, in a recursive function:
      
-         // Convert error tree to description tree
+         // Convert an error tree to a TreeDescription.
          Description describeErrorTree(Error error) {
             Description d = StringDescription(normalStyle, error.msg);
             if(error.causes.empty) {
@@ -352,36 +357,42 @@ doc "Matcher library for Ceylon.
             FieldAdapter<Phone>(\"nb\", (Phone expected) => EqualsMatcher(expected.phoneNb), (Phone actual)=>actual.phoneNb)
          }) {}
         
-         class CustomResolver(Descriptor descriptor) satisfies OptionalMatcherResolver {
-            shared actual Matcher? findMatcher(Object? expected/*, MatcherResolver childrenMatcherResolver*/) {
-                
-                switch(expected)
-                case(is User) {return UserMatcher(expected, descriptor);}
-                case(is Phone) {return PhoneMatcher(expected);}
-                else {return null;}
-            }
+     
+         Matcher? customResolver(Object? expected) {
+            switch(expected)
+            case(is User) {return UserMatcher(expected, customDescriptor);}
+            case(is Phone) {return PhoneMatcher(expected);}
+            else {return null;}
          }
-         value customResolver = DefaultMatcherResolver({CustomResolver(customDescriptor)}, customDescriptor);
-
+         value resolver = defaultMatcherResolver({customResolver}, customDescriptor);
+        
      Check it:
      
-         assertThat(null, {User(\"Ted\", {Phone(\"00000\")})}, 
-            ListMatcher( {User(\"Ted\", {Phone(\"00000\"), Phone(\"00001\")})}, customDescriptor), customResolver);
+         assertThat(     {User(\"Ted\", {Phone(\"00000\")})}, 
+            ListMatcher( {User(\"Ted\", {Phone(\"00000\"), Phone(\"00001\")})}, customDescriptor), resolver);
+
+     Or simplify by customizing assertThat():
+          
+         void myAssertThat(Object? actual, Matcher matcher, String? userMsg = null) =>
+            assertThat(actual, matcher, resolver, userMsg); 
+
+         myAssertThat( {User(\"Ted\", {Phone(\"00000\")})}, 
+                Is(    {User(\"Ted\", {Phone(\"00000\"), Phone(\"00001\")})}));
+
      
      The extra element is written as \"Phone: 00001\":
      
           1 mismatched: {
-          <<<At position 0 >>>ObjectMatcher: <<<User>>> {
-            name: (\"Ted\"), 
-            phones: (Expected list is longer than actual: 2 expected, 1 actual:  {
-                Phone {nb: (\"00000\")}
-              }
-               => ERR 1 expected not in actual list:  {
-                Phone: 00001
-              })
+            <<<At position 0 >>>ObjectMatcher: <<<User>>> {
+              name: (\"Ted\"), 
+              phones: (Expected list is longer than actual: 2 expected, 1 actual:  {
+                 Phone {nb: (\"00000\")}
+                } 
+                => ERR 1 expected not in actual list:  {
+                  Phone: 00001
+                })
+            }
           }
-        }
-     
      
      
      # Output formats
@@ -477,11 +488,22 @@ doc "Matcher library for Ceylon.
                               </head><body>\");
                 writer.write(\"<h1>Example report</h1>\");
                 
-                // write description
+                // Write description
                 StringBuilder sb = StringBuilder();
-                description.appendTo(sb, HtmlTextFormat(), 0);
-                writer.write(sb.string);
+                DescriptorEnv descriptorEnv = DefaultDescriptorEnv();
+                value format = HtmlTextFormat();
+                description.appendTo(sb, format, 0, descriptorEnv);
                 
+                // Write footnotes
+                for(fn in descriptorEnv.footNotes()) {
+                    format.writeNewLineIndent(sb, 0);
+                    format.writeNewLineIndent(sb, 0);
+                    format.writeText(sb, normalStyle, \"Reference [\``fn.reference\``]:\");
+                    format.writeNewLineIndent(sb, 0);
+                    fn.description.appendTo(sb, format, 0, descriptorEnv);
+                }
+     
+                writer.write(sb.string);
                 writer.write(\"</body></html>\");
                 writer.close(null);
             }
@@ -506,50 +528,55 @@ doc "Matcher library for Ceylon.
      If you have many custom classes, with custom resolvers and matchers, you could organise them as follow.
      First create an object to hold all custom resilver/matchers:
      
-         object testTools {
-             // Descriptor for all custom classes that requires it
-             object descriptor satisfies Descriptor {
-                value default = DefaultDescriptor();
-                shared actual String describe(Object? obj, DescriptorEnv descriptorEnv) {
-                    // Add descriptions for custom classes, if needed
-                    if(is MyClass obj) {
-                        return /*description of MyClass*/;
-                    }
-                    // Fallback to default descriptor for other objects
-                    return default.describe(obj, descriptorEnv);
-                }
-             }
- 
-             // Resolver for custom classes
-             object customMatcherResolver satisfies OptionalMatcherResolver {
-                shared actual Matcher? findMatcher(Object? expected/*, MatcherResolver childrenMatcherResolver*/) {
-                    // Add matchers for custom classes
-                    if(is MyClass expected) {
-                        return ObjectMatcher<MyClass>(expected, {
-                            FieldAdapter(\"someField\", (MyClass expected) => EqualsMatcher(expected.someField), (MyClass act) => act.someField)
-                            // FieldAdapters for other fields here
-                            }
-                        );
-                    }
-                    return null;    // for other classes
-                }
-             }
-             // Resolver for everything
-             shared MatcherResolver resolver = DefaultMatcherResolver({customMatcherResolver}, descriptor);
-         }
-
-     Map default [[Is]] and [[assertThat]] to cutom Is and assertThat:
-
-         import org.matcher4cl.core { defaultAssertThat = assertThat, MatcherIs = Is}
-         
-         class Is(Object? expected) 
-            extends MatcherIs(expected, testTools.resolver) {}
+         // Some custom class
+         class MyClass(shared String text) {}
         
-         void assertThat(Object? actual, Matcher matcher) 
-            => defaultAssertThat(actual, matcher, null, testTools.resolver); 
+         // Customization repository
+         object testTools {
+            
+            // Descriptor for all custom classes that requires it
+            object descriptor satisfies Descriptor {
+               value default = DefaultDescriptor();
+               shared actual String describe(Object? obj, DescriptorEnv descriptorEnv) {
+                   // Add descriptions for custom classes that needs one (usually not necessary)
+                   if(is MyClass obj) {
+                       return \"\";   // description of MyClass; create footnote(s) if needed
+                   }
+                   // Fallback to default descriptor for other objects
+                   return default.describe(obj, descriptorEnv);
+               }
+            }
+            
+            // Resolver for custom classes
+            Matcher? customMatcherResolver(Object? expected) {
+               if(is MyClass expected) {
+                   return ObjectMatcher<MyClass>(expected, {
+                       // Add a FieldAdapter<MyClass> for each field here
+                       FieldAdapter<MyClass>(\"text\", (MyClass expected) => EqualsMatcher(expected.text), (MyClass act) => act.text)
+                   }) ;
+               }
+               return null;
+            }
+            
+            // Our custom resolver, returns default matchers if expected if not a User
+            shared Matcher(Object?) resolver = defaultMatcherResolver({customMatcherResolver}, descriptor);
+         }    
+
      
-     Now you can use assertThat for custom objects:
-         assertThat(/*actual object containing MyClass*/, Is(/*expected object containing MyClass */));
+     Map default [[assertThat]] to cutom assertThat:
+
+         import org.matcher4cl.core { defaultAssertThat = assertThat, Is}
+         
+         shared void assertThat(Object? actual, Matcher matcher, String? userMessage= null)
+            => defaultAssertThat(actual, matcher, testTools.resolver, userMessage); 
+     
+     Now you can use assertThat and Is for any objects, custom or not:
+     
+         void test() {
+            assertThat(MyClass(\"a\") /*actual*/, Is(MyClass(\"a\")) /*expected*/);
+            assertThat(42, Is(42));
+            assertThat([MyClass(\"a\"), 42, \"Hello\"], Is([MyClass(\"a\"), 43, \"Hello\"]) );
+         }
      
      "
 by "Jean-Pierre Ragey"

@@ -1,5 +1,9 @@
 import org.matcher4cl.core{ assertThat, Is }
 
 void doTest() {
-    assertThat("Hello", Is("World"), "Some test");
+    assertThat ("The actual value", Is("The expected one"));
+}
+
+void doTestWithUserMsg() {
+    assertThat {"Hello"; Is("World"); userMsg = "Some test";};
 }

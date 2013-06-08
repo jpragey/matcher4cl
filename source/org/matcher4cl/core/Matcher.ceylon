@@ -187,7 +187,7 @@ shared class StringMatcher(
                 }
                 
                 if(exists fd = failDescription) {
-                    d = CatDescription({MatchDescription(null, normalStyle, expected, actual, descriptor), fd});
+                    d = CatDescription({MatchDescription(null, highlighted, expected, actual, descriptor), fd});
                 } else {
                     d = MatchDescription(null, normalStyle, expected, actual, descriptor);
                 }

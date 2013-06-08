@@ -265,7 +265,7 @@ shared class TreeDescription(
         nodeDescription.appendTo(stringBuilder, textFormat, depth, descriptorEnv);
         
         for(d in descriptions) {
-            textFormat.writeNewLineIndent(stringBuilder, depth);
+            textFormat.writeNewLineIndent(stringBuilder, depth+1);
             d.appendTo(stringBuilder, textFormat, depth+1, descriptorEnv);
         }
     }

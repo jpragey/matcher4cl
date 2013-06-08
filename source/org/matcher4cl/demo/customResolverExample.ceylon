@@ -1,12 +1,9 @@
-import org.matcher4cl.core{ assertThat, EqualsMatcher, ObjectMatcher, Matcher, Is, ListMatcher, Descriptor, DefaultDescriptor, FieldAdapter, DescriptorEnv, defaultMatcherResolver }
+import org.matcher4cl.core{ assertThat, EqualsMatcher, ObjectMatcher, Matcher, Is, ListMatcher, Descriptor, DefaultDescriptor, FieldAdapter, DescriptorEnv, defaultMatcherResolver, ThrowingResultHandler }
 
 
 void customResolverTest() {
     // Class under test
-    class User(name, age) {
-        shared String name; 
-        shared Integer age;
-    }
+    class User(shared String name, shared Integer age) {}
     
     // Our custom matcher
     class UserMatcher(User user) extends ObjectMatcher<User>(user, {
@@ -14,6 +11,7 @@ void customResolverTest() {
         FieldAdapter<User>("age", (User expected) => EqualsMatcher(expected.age), (User actual)=>actual.age)
     }) {}
     
+    // Our custom resolver, returns null if expected if not a User
     Matcher? customMatcherResolver(Object? expected) {
         if(is User expected) {
             return UserMatcher(expected);
@@ -21,13 +19,15 @@ void customResolverTest() {
         return null;
     }
   
+    // Our custom resolver, returns default matchers if expected if not a User
     value customResolver = defaultMatcherResolver({customMatcherResolver});
     
-    assertThat(     {User("Ted", 30), User("John", 20)}, 
-        ListMatcher({User("Ted", 30), User("John", 21)}), null, customResolver);
+    // Fire!
+    //assertThat(     {User("Ted", 30), User("John", 20)}, 
+    //    ListMatcher({User("Ted", 30), User("John", 21)}), customResolver);
         
     void myAssertThat(Object? actual, Matcher matcher, String? userMsg = null) =>
-        assertThat(actual, matcher, userMsg ,customResolver    ); 
+        assertThat(actual, matcher, customResolver, userMsg); 
     myAssertThat({User("Ted", 30)}, Is({User("John", 20)}));
 }
 
@@ -61,17 +61,25 @@ void customResolverWithDescriptorTest() {
         FieldAdapter<Phone>("nb", (Phone expected) => EqualsMatcher(expected.phoneNb), (Phone actual)=>actual.phoneNb)
     }) {}
     
-    Matcher? customResolver0(Object? expected) {
+    Matcher? customResolver(Object? expected) {
         
         switch(expected)
         case(is User) {return UserMatcher(expected, customDescriptor);}
         case(is Phone) {return PhoneMatcher(expected);}
         else {return null;}
     }
-    value customResolver = defaultMatcherResolver({customResolver0}, customDescriptor);
+    value resolver = defaultMatcherResolver({customResolver}, customDescriptor);
     
-    assertThat({User("Ted", {Phone("00000")})}, 
-        ListMatcher( {User("Ted", {Phone("00000"), Phone("00001")})}, customDescriptor), null, customResolver);
+    //assertThat(      {User("Ted", {Phone("00000")})}, 
+    //    ListMatcher( {User("Ted", {Phone("00000"), Phone("00001")})}, customDescriptor), resolver);
+    
+    // Simplified by customizing assertThat()
+    void myAssertThat(Object? actual, Matcher matcher, String? userMsg = null) =>
+        assertThat(actual, matcher, resolver, userMsg); 
+
+    myAssertThat( {User("Ted", {Phone("00000")})}, 
+        Is(       {User("Ted", {Phone("00000"), Phone("00001")})}));
+    
 }
 
 

@@ -288,11 +288,11 @@ void stringMatcherTest() {
 
     
     assertTrue(StringMatcher("a").match("ab").failed());
-    assertEquals("\"a\"/\"ab\" Sizes: actual=2 != expected=1", 
+    assertEquals("\"a\"/<<<\"ab\">>> Sizes: actual=2 != expected=1", 
         dToS(StringMatcher("a").match("ab").matchDescription));
 
     assertTrue(StringMatcher("ab").match("a").failed());
-    assertEquals("\"ab\"/\"a\" Sizes: actual=1 != expected=2", 
+    assertEquals("\"ab\"/<<<\"a\">>> Sizes: actual=1 != expected=2", 
         dToS(StringMatcher("ab").match("a").matchDescription));
 
     assertTrue(StringMatcher("ab").match(null).failed());
@@ -305,13 +305,13 @@ void stringMatcherTest() {
 
     
     assertFalse(StringMatcher("Hello").match("World").succeeded);
-    assertEquals("\"Hello\"/\"World\": expected[0]='H'(72=#48) != actual[0]='W'(87=#57)", 
+    assertEquals("\"Hello\"/<<<\"World\">>>: expected[0]='H'(72=#48) != actual[0]='W'(87=#57)", 
         dToS(StringMatcher("Hello").match("World").matchDescription));
    
-    assertEquals("\"aaaHello\"/\"aaaWorld\": expected[3]='H'(72=#48) != actual[3]='W'(87=#57)", 
+    assertEquals("\"aaaHello\"/<<<\"aaaWorld\">>>: expected[3]='H'(72=#48) != actual[3]='W'(87=#57)", 
         dToS(StringMatcher("aaaHello").match("aaaWorld").matchDescription));
    
-    assertEquals("\"a b\"/\"a\{#00A0}b\": expected[1]=' '(32=#20) != actual[1]=' '(160=#a0)", // NB: #00A0 is nbsp 
+    assertEquals("\"a b\"/<<<\"a\{#00A0}b\">>>: expected[1]=' '(32=#20) != actual[1]=' '(160=#a0)", // NB: #00A0 is nbsp 
         dToS(StringMatcher("a b").match("a\{#00A0}b").matchDescription));
    
     // With conversion
