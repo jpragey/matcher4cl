@@ -23,17 +23,17 @@ doc "Matcher library for Ceylon.
      see the \"Organizing tests\" section.
      
      Under the hood:
-     - `assertThat()` get an optionnal user message, the value to match (of type `Object?`), and a `Matcher`, that will check the value;
+     - [[assertThat]] get the value to match (of type `Object?`), a [[Matcher]] ([[Is]] here), that will check the value, and an optionnal user message;
      - `Is` examines its argument (the expected value) and delegates matching to another matcher, depending on the value type. 
-        For String is uses `EqualsMatcher`, which uses '==';
+        For String is uses [[StringMatcher]], which uses '==';
      - `assertThat()` calls the matcher `match(Object? actual)` method, that match the actual value against the `Is()` argument, 
-       and return an `MatcherResult`. `MatcherResult` simply wraps a matched/not matched boolean, and a `Description` of what happened.
+       and return an [[MatcherResult]]. `MatcherResult` simply wraps a matched/not matched boolean, and a [[Description]] of what happened.
        `Description` is tree of objects describing the match, that can be translated later to various formats (short/long messages, text/html, etc).  
-     - if matching failed, `assertThat()` delegates failure management to a `ResultHandler` implementation; by default it's a `ThrowingResultHandler`;
-     - `ThrowingResultHandler` throws a `MatchException`, which carries the match `Description`, and `Description` translated to a short message, 
+     - if matching failed, `assertThat()` delegates failure management to a [[ResultHandler]] implementation; by default it's a [[ThrowingResultHandler]];
+     - `ThrowingResultHandler` throws a [[MatchException]], which carries the match `Description`, and `Description` translated to a short message, 
        as exception cause;
-     - when `MatchException` is caught by the framework, it prints short message. Note that a suitable framework could also convert the `MatchException`
-        `Description` field to other formats: multiline message, or HTML, more convenient for complex objects (eg lists, maps, etc).     
+     - when `MatchException` is caught by the framework, it prints a multiline text message. Note that a suitable framework could also convert the `MatchException`
+        `Description` field to other formats: short message, HTML, etc.     
         
      
      # Matchers
@@ -65,7 +65,7 @@ doc "Matcher library for Ceylon.
      - [[Is]], the swiss knife of matchers: it delegates matching to a suitable matcher, 
        depending on the expected object type (see [[DefaultMatcherResolver]] doc); 
      - [[EqualsMatcher]] (uses ==), [[IdentifiableMatcher]] (uses ===), [[NotNullMatcher]]; 
-     - [[StringMatcher]] (uses ==); 
+     - [[StringMatcher]]; uses '==' and describes the first non-matching char (Unicode codepoint); 
      - [[ListMatcher]], [[MapMatcher]] for (surprise) lists and maps; 
      - [[ObjectMatcher]], [[FieldAdapter]], for custom class matching (see later)
      - logical matchers: [[AllMatcher]] (all children matchers must match), [[AnyMatcher]] (any child matcher must match), 
