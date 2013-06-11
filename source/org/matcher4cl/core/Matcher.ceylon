@@ -448,15 +448,15 @@ shared class MapMatcher<Key, Item>(
 }
 
 doc "Adapter for a custom class T field, to by used with [[ObjectMatcher]].
-     The field of actual value is returned by `field()`; a matcher for it is returned by `matcher()`.
+     The field of actual value is returned by `field()`.
      "
 see "ObjectMatcher"     
 by "Jean-Pierre Ragey"
 shared class FieldAdapter<T>(
     doc "Class field name, for description"
     shared String fieldName,
-    doc "Return a matcher for the expected field of `expected`"
-    shared Matcher (T) matcher,
+    doc "Matcher for the expected field"
+    shared Matcher matcher,
     doc "Return the value of the field of `actual`"
     shared Object? (T) field
     ) 
@@ -497,7 +497,7 @@ shared class ObjectMatcher<T> (
             for(fieldMatcher in fieldMatchers) {
                 
                 Object? actualField = fieldMatcher.field(actual); 
-                MatcherResult fieldResult = fieldMatcher.matcher(expected).match(actualField, matcherResolver);
+                MatcherResult fieldResult = fieldMatcher.matcher.match(actualField, matcherResolver);
                 if(fieldResult.failed()) {
                     succeeded = false;
                 }

@@ -93,12 +93,13 @@ void mapMatcherTest() {
 
 void objectMatcherTest() {
     class A(name, age) {shared String name; shared Integer age;}
+    A expected = A("John", 20);
     {FieldAdapter<A> *} aFieldMatchers = {
-        FieldAdapter<A>("name", (A expected) => EqualsMatcher(expected.name), (A actual)=>actual.name),
-        FieldAdapter<A>("age", (A expected) => EqualsMatcher(expected.age), (A actual)=>actual.age)
+        FieldAdapter<A>("name", EqualsMatcher(expected.name), (A actual)=>actual.name),
+        FieldAdapter<A>("age", EqualsMatcher(expected.age), (A actual)=>actual.age)
     };
         
-    ObjectMatcher<A> objectMatcher = ObjectMatcher<A> (A("John", 20), aFieldMatchers);
+    ObjectMatcher<A> objectMatcher = ObjectMatcher<A> (expected, aFieldMatchers);
 
     assertTrue(objectMatcher.match(A("John", 20)).succeeded);
     

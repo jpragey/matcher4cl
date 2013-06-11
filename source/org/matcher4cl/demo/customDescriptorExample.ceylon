@@ -95,7 +95,7 @@ Matcher? customMatcherResolver(Object? expected) {
         
         return ObjectMatcher<AppConfig>(expected, {
             // This FieldAdapter won't be really used here, as matching will fail on data *types*.
-            FieldAdapter<AppConfig>("name", (AppConfig expected) => EqualsMatcher(expected.appParam), (AppConfig actual)=>actual.appParam)
+            FieldAdapter<AppConfig>("name", EqualsMatcher(expected.appParam), (AppConfig actual)=>actual.appParam)
         }, customDescriptor /*The right one*/);
     }
     return null;    // for other classes

@@ -6,9 +6,9 @@ void customResolverTest() {
     class User(shared String name, shared Integer age) {}
     
     // Our custom matcher
-    class UserMatcher(User user) extends ObjectMatcher<User>(user, {
-        FieldAdapter<User>("name", (User expected) => EqualsMatcher(expected.name), (User actual)=>actual.name),
-        FieldAdapter<User>("age", (User expected) => EqualsMatcher(expected.age), (User actual)=>actual.age)
+    class UserMatcher(User expected) extends ObjectMatcher<User>(expected, {
+        FieldAdapter<User>("name", EqualsMatcher(expected.name), (User actual)=>actual.name),
+        FieldAdapter<User>("age",  EqualsMatcher(expected.age), (User actual)=>actual.age)
     }) {}
     
     // Our custom resolver, returns null if expected if not a User
@@ -53,12 +53,12 @@ void customResolverWithDescriptorTest() {
     }
 
     // Our custom matchers
-    class UserMatcher(User user, Descriptor descriptor) extends ObjectMatcher<User>(user, {
-        FieldAdapter<User>("name", (User expected) => EqualsMatcher(expected.name), (User actual)=>actual.name),
-        FieldAdapter<User>("phones", (User expected) => ListMatcher(expected.phones, descriptor), (User actual)=>actual.phones)
+    class UserMatcher(User expected, Descriptor descriptor) extends ObjectMatcher<User>(expected, {
+        FieldAdapter<User>("name", EqualsMatcher(expected.name), (User actual)=>actual.name),
+        FieldAdapter<User>("phones", ListMatcher(expected.phones, descriptor), (User actual)=>actual.phones)
     }) {}
-    class PhoneMatcher(Phone phone) extends ObjectMatcher<Phone>(phone, {
-        FieldAdapter<Phone>("nb", (Phone expected) => EqualsMatcher(expected.phoneNb), (Phone actual)=>actual.phoneNb)
+    class PhoneMatcher(Phone expected) extends ObjectMatcher<Phone>(expected, {
+        FieldAdapter<Phone>("nb", EqualsMatcher(expected.phoneNb), (Phone actual)=>actual.phoneNb)
     }) {}
     
     Matcher? customResolver(Object? expected) {

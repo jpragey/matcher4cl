@@ -124,9 +124,9 @@ doc "Matcher library for Ceylon.
             class User(shared String name, shared Integer age) {}
             
             // Our custom matcher
-            class UserMatcher(User user) extends ObjectMatcher<User>(user, {
-                FieldAdapter<User>(\"name\", (User expected) => EqualsMatcher(expected.name), (User actual)=>actual.name),
-                FieldAdapter<User>(\"age\", (User expected) => EqualsMatcher(expected.age), (User actual)=>actual.age)
+            class UserMatcher(User expected) extends ObjectMatcher<User>(user, {
+                FieldAdapter<User>(\"name\", EqualsMatcher(expected.name), (User actual)=>actual.name),
+                FieldAdapter<User>(\"age\", EqualsMatcher(expected.age), (User actual)=>actual.age)
             }) {}
                 
             // The test
@@ -155,9 +155,9 @@ doc "Matcher library for Ceylon.
             class User(shared String name, shared Integer age) {}
             
             // Our custom matcher (the same)
-            class UserMatcher(User user) extends ObjectMatcher<User>(user, {
-                FieldAdapter<User>(\"name\", (User expected) => EqualsMatcher(expected.name), (User actual)=>actual.name),
-                FieldAdapter<User>(\"age\", (User expected) => EqualsMatcher(expected.age), (User actual)=>actual.age)
+            class UserMatcher(User expected) extends ObjectMatcher<User>(user, {
+                FieldAdapter<User>(\"name\", EqualsMatcher(expected.name), (User actual)=>actual.name),
+                FieldAdapter<User>(\"age\", EqualsMatcher(expected.age), (User actual)=>actual.age)
             }) {}
             
             // Our custom resolver, returns null if expected if not a User
@@ -243,7 +243,7 @@ doc "Matcher library for Ceylon.
      The assertion will print:
             '=='1.0 + 0.0i /<<<1.0 + 0.1i >>>
      
-     ### Long descriptions: footnotes
+     ## Long descriptions: footnotes
      
      If an object is too complex (eg a tree), its description may be lengthy, and may lead to hardly readable message.
      Matcher4cl provides a footnote mechanism, in which long descriptions may be deferred to the end of mismatch description: 
@@ -349,12 +349,12 @@ doc "Matcher library for Ceylon.
      as constructor argument, and pass it to its phone list matcher:
      
          // UserMatcher passes the (custom) descriptor to the phones ListMatcher
-         class UserMatcher(User user, Descriptor descriptor) extends ObjectMatcher<User>(user, {
-            FieldAdapter<User>(\"name\", (User expected) => EqualsMatcher(expected.name), (User actual)=>actual.name),
-            FieldAdapter<User>(\"phones\", (User expected) => ListMatcher(expected.phones, descriptor), (User actual)=>actual.phones)
+         class UserMatcher(User expected, Descriptor descriptor) extends ObjectMatcher<User>(expected, {
+            FieldAdapter<User>(\"name\", EqualsMatcher(expected.name), (User actual)=>actual.name),
+            FieldAdapter<User>(\"phones\", ListMatcher(expected.phones, descriptor), (User actual)=>actual.phones)
          }) {}
-         class PhoneMatcher(Phone phone) extends ObjectMatcher<Phone>(phone, {
-            FieldAdapter<Phone>(\"nb\", (Phone expected) => EqualsMatcher(expected.phoneNb), (Phone actual)=>actual.phoneNb)
+         class PhoneMatcher(Phone expected) extends ObjectMatcher<Phone>(phone, {
+            FieldAdapter<Phone>(\"nb\", EqualsMatcher(expected.phoneNb), (Phone actual)=>actual.phoneNb)
          }) {}
         
      
@@ -552,7 +552,7 @@ doc "Matcher library for Ceylon.
                if(is MyClass expected) {
                    return ObjectMatcher<MyClass>(expected, {
                        // Add a FieldAdapter<MyClass> for each field here
-                       FieldAdapter<MyClass>(\"text\", (MyClass expected) => EqualsMatcher(expected.text), (MyClass act) => act.text)
+                       FieldAdapter<MyClass>(\"text\", EqualsMatcher(expected.text), (MyClass act) => act.text)
                    }) ;
                }
                return null;
