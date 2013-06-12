@@ -106,6 +106,23 @@ void objectMatcherTest() {
     assertFalse(objectMatcher.match(A("Ted", 30)).succeeded);
     assertEquals("<<<A>>> {name: ('=='\"John\"/<<<\"Ted\">>>), age: ('=='20/<<<30>>>)}", 
         dToS(objectMatcher.match(A("Ted", 30)).matchDescription));
+    
+    // -- Wrong field list 
+    ObjectMatcher<A> tooManyAdaptersObjectMatcher = ObjectMatcher<A> (expected, {
+        FieldAdapter<A>("name",   EqualsMatcher(expected.name), (A actual)=>actual.name),
+        FieldAdapter<A>("age",    EqualsMatcher(expected.age), (A actual)=>actual.age),
+        FieldAdapter<A>("gotcha", AnythingMatcher(), (A actual)=>null)
+    });
+    assertFalse(tooManyAdaptersObjectMatcher.match(A("Ted", 30)).succeeded);
+    assertEquals("ObjectMatcher<org.matcher4cl.test::A>: FieldAdapter list and class fields don't match.FieldAdapter(s) without class fields: gotcha", 
+        dToS(tooManyAdaptersObjectMatcher.match(A("Ted", 30)).matchDescription));
+    
+    ObjectMatcher<A> notEnoughAdaptersObjectMatcher = ObjectMatcher<A> (expected, {
+        FieldAdapter<A>("name",   EqualsMatcher(expected.name), (A actual)=>actual.name)
+    });
+    assertFalse(notEnoughAdaptersObjectMatcher.match(A("Ted", 30)).succeeded);
+    assertEquals("ObjectMatcher<org.matcher4cl.test::A>: FieldAdapter list and class fields don't match.Class field(s) without FieldAdapter: age", 
+        dToS(notEnoughAdaptersObjectMatcher.match(A("Ted", 30)).matchDescription));
 }
 
 

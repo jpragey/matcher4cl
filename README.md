@@ -13,7 +13,7 @@ Flexibility is a fundamental goal of matcher4cl:
  - create non-standard matchers for existing classes (eg Float with allowed rounding error);
  - customize output formats. ASCII is provided out of the box, but other formats (like HTML) can be easily written.
 
-Matcher4cl is a pure Ceylon library; it needs ceylon 0.6.
+Matcher4cl needs ceylon 0.6 (currently in github). 
 
 Installation
 ============
@@ -22,6 +22,10 @@ Installation
     git clone https://github.com/jpragey/matcher4cl
 
     cd matcher4cl/
+    # If ant is installed: 
+    ant clean compile test doc
+    
+    # If ant is not installed: 
     ceylon compile org.matcher4cl.{core,demo,test}
     ceylon doc org.matcher4cl.{core,demo,test}
 

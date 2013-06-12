@@ -1,3 +1,8 @@
+import org.matcher4cl.core {JavaUtils {getFieldNames} }
+import java.lang { arrays, JString = String }
+import ceylon.collection { HashSet }
+import java.util { JIterator = Iterator }
+
 
 doc "Result of a [[Matcher]] match."
 by "Jean-Pierre Ragey"
@@ -468,13 +473,19 @@ doc "Custom class matcher.
      It checks if actual value is a T (or a subtype of),
      then use a list of [[FieldAdapter]] to get matchers for its fields and the fields themselves;
      match succeeds if all field matchers succeed.
+     
+     Matching always fails if the FieldAdapter list is not the same as the class field list - your FieldAdapters
+     must cover ALL the class fields. So if you add a field to a class but forget to update the FieldAdapters, 
+     you're warned.
+     Comparison is currently done only on field names, but this may change as metaprogramming becomes available. 
+     If you want to explicitely ignore some field, use [[AnythingMatcher]].   
      "
 by "Jean-Pierre Ragey"
 shared class ObjectMatcher<T> (
         doc "The expected object."
         T expected,
         doc "Adapters for each field, to get actual objects fields and field matchers."
-        {FieldAdapter<T> *} fieldMatchers,
+        {FieldAdapter<T> *} fieldAdapters,
         doc "Descriptor used to describe actual value, if its type doesn't describe the expected one.'"
         Descriptor descriptor = DefaultDescriptor()
         ) satisfies Matcher 
@@ -488,13 +499,52 @@ shared class ObjectMatcher<T> (
         return cn.split(":", true, true).last else cn;
     }
     
+    Description? checkAllFieldHaveMatchers() {
+        
+        // -- Use java wrapper
+        HashSet<String> fieldNames = HashSet<String>();
+        JIterator<String> it = getFieldNames(expected).iterator();  
+        while (it.hasNext()) {
+            fieldNames.add(it.next());
+        }
+        
+        HashSet<String> checkedFieldNames = HashSet<String>(fieldAdapters.map((FieldAdapter<T> fa) => fa.fieldName));
+        
+        SequenceBuilder<Description> errBuilder = SequenceBuilder<Description>();
+        
+        Set<String> checkedButUndefined = checkedFieldNames.complement(fieldNames);
+        if(!checkedButUndefined.empty) {
+            String msg = "FieldAdapter(s) without class fields: `` ", ".join(checkedButUndefined) ``";
+            errBuilder.append(StringDescription(msg));
+        }
+        
+        Set<String> definedButNotChecked = fieldNames.complement(checkedFieldNames);
+        if(!definedButNotChecked.empty) {
+            String msg = "Class field(s) without FieldAdapter: `` ", ".join(definedButNotChecked) ``";
+            errBuilder.append(StringDescription(msg));
+        }
+        
+        if(errBuilder.empty) {
+            return null;
+        }
+        return TreeDescription(StringDescription("ObjectMatcher<``className(expected)``>: FieldAdapter list and class fields don't match."), 
+                    errBuilder.sequence);
+    }
+
+    Description? badFieldAdaptersDescription = checkAllFieldHaveMatchers();
+    
+    
     shared actual MatcherResult match(Object? actual, Matcher (Object? ) matcherResolver) {
+        
+        if(exists badFieldAdaptersDescription) {
+            return MatcherResult(false, badFieldAdaptersDescription);
+        }
         
         if(is T actual) {
             
             variable Boolean succeeded = true;
             SequenceBuilder<ObjectFieldDescription> fieldDescrSb = SequenceBuilder<ObjectFieldDescription>(); 
-            for(fieldMatcher in fieldMatchers) {
+            for(fieldMatcher in fieldAdapters) {
                 
                 Object? actualField = fieldMatcher.field(actual); 
                 MatcherResult fieldResult = fieldMatcher.matcher.match(actualField, matcherResolver);
