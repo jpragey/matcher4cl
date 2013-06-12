@@ -1,7 +1,23 @@
 Matcher4cl
 ==========
 
-Matcher library for Ceylon.
+- [Status](#status)
+- [Licence](#licence)
+- [Installation](#installation)
+- [5 mn introduction](#5-mn-introduction)
+- [Matchers](#matchers)
+ - [Custom simple values matchers](#custom-simple-values-matchers)
+ - [Custom class matchers](#custom-class-matchers)
+- [Resolvers](#resolvers)
+- [Descriptors](#descriptors)
+ - [Long descriptions: footnotes](#long-descriptions-footnotes)
+ - [Descriptors for custom objects fields](#descriptors-for-custom-objects-fields)
+- [Output formats](#output-formats)
+ - [Example: HTML output.](#example-html-output)
+- [Organizing tests](#organizing-tests)
+
+
+Matcher4cl is a matcher library for the Ceylon programming language.
 
 Unit testing involves matching calculated values against expected ones; matcher4cl simplifies matching 'complex' values:
  - provides easy-to-read messages;
@@ -25,7 +41,7 @@ Matcher4cl is still in an 'everything can (if necessary) change' status, like Ce
   
 I expect to stabilize it roughly when Ceylon 1.0 is out.
 
-Licence 
+Licence
 =======
    Apache 2.0:  http://www.apache.org/licenses/LICENSE-2.0.html
 
@@ -167,7 +183,8 @@ void customMatcherTest() {
 } 
 ```
          
-## Custom class matchers
+##Custom class matchers
+
 
 Simple custom class matchers can be created using `ObjectMatcher` and `FieldAdapter`. `FieldAdapter` delegates 
 a single field matching to a field specific matcher; `ObjectMatcher` delegates custom class matching 
@@ -376,7 +393,7 @@ And if we try an assertion:
 void testConfigFileWithFootnotes() {
    assertThat(parseConfigFile(), EqualsMatcher(AppConfig("param"), customDescriptor));
 }
-```ceylon
+```
 
 We get a mismatch message with a footnote:
 
