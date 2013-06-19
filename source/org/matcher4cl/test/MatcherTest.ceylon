@@ -89,42 +89,86 @@ void mapMatcherTest() {
 }
 
 
+//shared class AAA(name, age) {variable shared String name; variable shared Integer age;}
+shared class AAA(shared String name, shared Integer age) {}
 
+
+shared class TestClass0(name, age) {shared String name; shared Integer age;}
 
 void objectMatcherTest() {
-    class A(name, age) {shared String name; shared Integer age;}
-    A expected = A("John", 20);
-    {FieldAdapter<A> *} aFieldMatchers = {
-        FieldAdapter<A>("name", EqualsMatcher(expected.name), (A actual)=>actual.name),
-        FieldAdapter<A>("age", EqualsMatcher(expected.age), (A actual)=>actual.age)
+//    class TestClass0(name, age) {shared String name; shared Integer age;}
+    TestClass0 expected = TestClass0("John", 20);
+    {FieldAdapter<TestClass0> *} aFieldMatchers = {
+        FieldAdapter<TestClass0>("name", EqualsMatcher(expected.name), (TestClass0 actual)=>actual.name),
+        FieldAdapter<TestClass0>("age", EqualsMatcher(expected.age), (TestClass0 actual)=>actual.age)
     };
         
-    ObjectMatcher<A> objectMatcher = ObjectMatcher<A> (expected, aFieldMatchers);
+    ObjectMatcher<TestClass0> objectMatcher = ObjectMatcher<TestClass0> (expected, aFieldMatchers);
 
-    assertTrue(objectMatcher.match(A("John", 20)).succeeded);
+    assertTrue(objectMatcher.match(TestClass0("John", 20)).succeeded);
     
-    assertFalse(objectMatcher.match(A("Ted", 30)).succeeded);
-    assertEquals("<<<A>>> {name: ('=='\"John\"/<<<\"Ted\">>>), age: ('=='20/<<<30>>>)}", 
-        dToS(objectMatcher.match(A("Ted", 30)).matchDescription));
+    assertFalse(objectMatcher.match(TestClass0("Ted", 30)).succeeded);
+    assertEquals("<<<TestClass0>>> {name: ('=='\"John\"/<<<\"Ted\">>>), age: ('=='20/<<<30>>>)}", 
+        dToS(objectMatcher.match(TestClass0("Ted", 30)).matchDescription));
     
-    // -- Wrong field list 
-    ObjectMatcher<A> tooManyAdaptersObjectMatcher = ObjectMatcher<A> (expected, {
-        FieldAdapter<A>("name",   EqualsMatcher(expected.name), (A actual)=>actual.name),
-        FieldAdapter<A>("age",    EqualsMatcher(expected.age), (A actual)=>actual.age),
-        FieldAdapter<A>("gotcha", AnythingMatcher(), (A actual)=>null)
-    });
-    assertFalse(tooManyAdaptersObjectMatcher.match(A("Ted", 30)).succeeded);
-    assertEquals("ObjectMatcher<org.matcher4cl.test::A>: FieldAdapter list and class fields don't match.FieldAdapter(s) without class fields: gotcha", 
-        dToS(tooManyAdaptersObjectMatcher.match(A("Ted", 30)).matchDescription));
+    //// -- Wrong field list 
+    //ObjectMatcher<TestClass0> tooManyAdaptersObjectMatcher = ObjectMatcher<TestClass0> (expected, {
+    //    FieldAdapter<TestClass0>("name",   EqualsMatcher(expected.name), (TestClass0 actual)=>actual.name),
+    //    FieldAdapter<TestClass0>("age",    EqualsMatcher(expected.age), (TestClass0 actual)=>actual.age),
+    //    FieldAdapter<TestClass0>("gotcha", AnythingMatcher(), (TestClass0 actual)=>null)
+    //});
+    //assertFalse(tooManyAdaptersObjectMatcher.match(TestClass0("Ted", 30)).succeeded);
+    //assertEquals("ObjectMatcher<org.matcher4cl.test::A>: FieldAdapter list and class fields don't match.FieldAdapter(s) without class fields: gotcha", 
+    //    dToS(tooManyAdaptersObjectMatcher.match(TestClass0("Ted", 30)).matchDescription));
+    //
+    //ObjectMatcher<A> notEnoughAdaptersObjectMatcher = ObjectMatcher<A> (expected, {
+    //    FieldAdapter<A>("name",   EqualsMatcher(expected.name), (A actual)=>actual.name)
+    //});
+    //assertFalse(notEnoughAdaptersObjectMatcher.match(A("Ted", 30)).succeeded);
+    //assertEquals("ObjectMatcher<org.matcher4cl.test::A>: FieldAdapter list and class fields don't match.Class field(s) without FieldAdapter: age", 
+    //    dToS(notEnoughAdaptersObjectMatcher.match(A("Ted", 30)).matchDescription));
     
-    ObjectMatcher<A> notEnoughAdaptersObjectMatcher = ObjectMatcher<A> (expected, {
-        FieldAdapter<A>("name",   EqualsMatcher(expected.name), (A actual)=>actual.name)
-    });
-    assertFalse(notEnoughAdaptersObjectMatcher.match(A("Ted", 30)).succeeded);
-    assertEquals("ObjectMatcher<org.matcher4cl.test::A>: FieldAdapter list and class fields don't match.Class field(s) without FieldAdapter: age", 
-        dToS(notEnoughAdaptersObjectMatcher.match(A("Ted", 30)).matchDescription));
+    
 }
 
+/*
+shared class TestClass(shared String str0, shared String? optStr1, shared Integer int0, shared Integer? int1) {}
+
+shared void objectMatcherWithDefaultFieldsTest() {
+
+//    class TestClass(shared String str0, shared String? optStr1, shared Integer int0, shared Integer? int1) {}
+    
+    class TestClassMatcher(TestClass expected) extends ObjectMatcher<TestClass> (expected, {}) {} 
+    
+    
+    assertTrue(TestClassMatcher( TestClass("str0", "str1", 42, 100)).match(TestClass("str0", "str1", 42, 100)).succeeded);
+    
+    assertTrue(TestClassMatcher(TestClass("str0", null, 42, null)).
+                       match(   TestClass("str0", null, 42, null)).succeeded);
+    
+    
+    assertFalse(TestClassMatcher(TestClass("str0", null, 42, null)).
+                       match(    TestClass("strx", null, 42, null)).succeeded);
+    assertEquals("<<<TestClass>>> {int0: (42), int1: (<null>), optStr1: (<null>), str0: (\"str0\"/<<<\"strx\">>>: expected[3]='0'(48=#30) != actual[3]='x'(120=#78))}", 
+          dToS(TestClassMatcher(TestClass("str0", null, 42, null)).
+            match(              TestClass("strx", null, 42, null)).matchDescription));
+    
+    assertFalse(TestClassMatcher(TestClass("str0", null, 42, null)).
+                       match(    TestClass("str0", null, 43, null)).succeeded);
+    assertEquals("<<<TestClass>>> {int0: ('=='42/<<<43>>>), int1: (<null>), optStr1: (<null>), str0: (\"str0\")}", 
+          dToS(TestClassMatcher(TestClass("str0", null, 42, null)).
+            match(              TestClass("str0", null, 43, null)).matchDescription));
+    
+    assertFalse(TestClassMatcher(TestClass("str0", null,   42, null)).
+                       match(    TestClass("str0", "str1", 42, null)).succeeded);
+    assertEquals("<<<TestClass>>> {int0: (42), int1: (<null>), optStr1: (ERR: <null> was expected: <null>/<<<\"str1\">>>), str0: (\"str0\")}", 
+          dToS(TestClassMatcher(TestClass("str0", null,   42, null)).
+            match(              TestClass("str0", "str1", 42, null)).matchDescription));
+    
+    // -- Custom 
+    
+}
+*/
 
 void allMatcherTest() {
 
@@ -364,6 +408,7 @@ void matcherTestSuite() {
     testRunner.addTest("org.jpr.matchers.core::listMatcherTest", listMatcherTest); 
     testRunner.addTest("org.jpr.matchers.core::mapMatcherTest", mapMatcherTest);
     testRunner.addTest("org.jpr.matchers.core::objectMatcherTest", objectMatcherTest);
+////    testRunner.addTest("org.jpr.matchers.core::objectMatcherWithDefaultFieldsTest", objectMatcherWithDefaultFieldsTest);
     testRunner.addTest("org.jpr.matchers.core::allMatcherTest", allMatcherTest);
     testRunner.addTest("org.jpr.matchers.core::anyMatcherTest", anyMatcherTest);
     testRunner.addTest("org.jpr.matchers.core::notMatcherTest", notMatcherTest);

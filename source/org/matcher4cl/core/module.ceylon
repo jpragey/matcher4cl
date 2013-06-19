@@ -1,4 +1,4 @@
-doc "Matcher library for Ceylon.
+    "Matcher library for Ceylon.
      
      # 5 mn introduction
      A matcher is an object that checks that another object is 'equal' to a predefined value. 
@@ -579,8 +579,8 @@ doc "Matcher library for Ceylon.
          }
      
      "
-by "Jean-Pierre Ragey"
-license "Apache Software License V2.0" 
+by ("Jean-Pierre Ragey")
+license ("Apache Software License V2.0") 
 module org.matcher4cl.core '0.1.0' {
     import ceylon.test '0.6';
     import ceylon.collection '0.6';

@@ -1,5 +1,5 @@
 
-doc "Get a Matcher for an expected object.
+"Get a Matcher for an expected object.
      It first queries delegates; if they all return null, it tries the following mapping:
      - `String`: returns an [[EqualsMatcher]];
      - `Map<Object, Object>`: returns an [[MapMatcher]]`;
@@ -10,15 +10,15 @@ doc "Get a Matcher for an expected object.
      " 
 shared Matcher defaultMatcherResolver(
 
-    doc "Delegate resolvers, will be asked first, in this order.
+    "Delegate resolvers, will be asked first, in this order.
          If any of then returns a Matcher, this matcher will be used."
     {Matcher? (Object? ) *} delegates = {},
     
-    doc "The descriptor that will be passed to created Matchers."
+    "The descriptor that will be passed to created Matchers."
     Descriptor descriptor = DefaultDescriptor()
     )
     (
-    doc "expected object"
+    "expected object"
     Object? expected) 
 {
 

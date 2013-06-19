@@ -1,43 +1,45 @@
-import org.matcher4cl.core {JavaUtils {getFieldNames} }
-import java.lang { arrays, JString = String }
+import java.lang { arrays, JString = String, JLong = Long, NoSuchFieldException, SecurityException, IllegalArgumentException, IllegalAccessException, NoSuchMethodException, Class }
 import ceylon.collection { HashSet }
 import java.util { JIterator = Iterator }
+import java.lang.reflect { InvocationTargetException }
+import ceylon.language.metamodel { type, Attribute }
+import ceylon.language.metamodel.declaration { ClassDeclaration, AttributeDeclaration }
 
 
-doc "Result of a [[Matcher]] match."
-by "Jean-Pierre Ragey"
+"Result of a [[Matcher]] match."
+by ("Jean-Pierre Ragey")
 shared class MatcherResult(succeeded, matchDescription) {
-    doc "true if match succeeded, false otherwise."
+    "true if match succeeded, false otherwise."
     shared Boolean succeeded;
     
-    doc "Description of matched objects. It is typically a tree of [[Description]]s, where [[MatchDescription]] 
+    "Description of matched objects. It is typically a tree of [[Description]]s, where [[MatchDescription]] 
          mark simple values comparisons, and decorated by mismatch indications.
          Note that it must be present even if matching succeeded, as [[NotMatcher]] uses successful match descriptions
          as mismatch description."
     shared Description matchDescription;
     
-    doc "Convenient method that returns the opposite of `succeeded`."
+    "Convenient method that returns the opposite of `succeeded`."
     shared Boolean failed() {
         return !succeeded;
     }
 }
 
-doc "Matches an actual value against some criterion (usually an 'expected' value passed to constructor)"
-by "Jean-Pierre Ragey"
+"Matches an actual value against some criterion (usually an 'expected' value passed to constructor)"
+by ("Jean-Pierre Ragey")
 shared interface Matcher {
-    doc "Performs the match."
+    "Performs the match."
     shared formal MatcherResult match(
-        doc "The value to match."
+        "The value to match."
         Object? actual,
-        doc "Resolver: implementations may use it to get matcher for members. 
+        "Resolver: implementations may use it to get matcher for members. 
              Useful for somewhat generic class matchers, eg matchers for lists or maps."
         Matcher (Object? ) resolver = defaultMatcherResolver());
     
-    doc "Short one-line description, eg 'operator =='"
+    "Short one-line description, eg 'operator =='"
     shared formal Description description(Matcher (Object? ) resolver);
 }
 
-doc "Matcher based on comparison between two simple values, like Integer or String. 
+"Matcher based on comparison between two simple values, like Integer or String. 
      Subclassing it is a simple way of creating custom simple values matcher.
      It delegates matching to a method with an equals-like signature:
      `Description?(T, T)`, that returns null for match, or a mismatch description.
@@ -52,26 +54,26 @@ doc "Matcher based on comparison between two simple values, like Integer or Stri
      If your class is somewhat complex (eg it has fields), [[ObjectMatcher]] may be more appropriate. 
      "
 see ("EqualsMatcher", "IdentifiableMatcher")
-by "Jean-Pierre Ragey"
+by ("Jean-Pierre Ragey")
 shared abstract class EqualsOpMatcher<T>(
-    doc "The expected value"
+    "The expected value"
     T? expected, 
-    doc "Value comparator: returns null if first arg (expected) matches  the second arg (actual),
+    "Value comparator: returns null if first arg (expected) matches  the second arg (actual),
          otherwise return a mismatch description." 
     Description?(T, T) equals,
-    doc "A short description of the matcher (eg '=='). Suggestion: add matcher parameters, eg error margin."
+    "A short description of the matcher (eg '=='). Suggestion: add matcher parameters, eg error margin."
     String equalsDescriptionString, 
-    doc "Descriptor for actual/expected values formatting"
+    "Descriptor for actual/expected values formatting"
     Descriptor descriptor = DefaultDescriptor()
     
     ) satisfies Matcher 
     given T satisfies Object
 {
     
-    doc "Same content as constructor `equalsDescriptionString` parameter."
+    "Same content as constructor `equalsDescriptionString` parameter."
     shared actual Description description(Matcher (Object? ) resolver) => ValueDescription(normalStyle, equalsDescriptionString);
     
-    doc "Perform the match:
+    "Perform the match:
          - succeeds if both actual/expected values are null;
          - fails if only one is null;
          - fails if `actual` is not a T or a subtype of T;
@@ -115,22 +117,22 @@ shared abstract class EqualsOpMatcher<T>(
     }
 }
 
-doc "Matcher for String"
-by "Jean-Pierre Ragey"
+"Matcher for String"
+by ("Jean-Pierre Ragey")
 shared class StringMatcher(
-    doc "The expected value"
+    "The expected value"
     String expected,
     
-    doc "Converts actual and expected values before processing. For example, if you use `(String s) => s.uppercased`, 
+    "Converts actual and expected values before processing. For example, if you use `(String s) => s.uppercased`, 
          matching will be case insensitive."
     String(String) convert = (String s) => s,
        
-    doc "Descriptor for actual values formatting"
+    "Descriptor for actual values formatting"
     Descriptor descriptor = DefaultDescriptor()
     ) satisfies Matcher 
 {
     
-    doc "Same content as constructor `equalsDescriptionString` parameter."
+    "Same content as constructor `equalsDescriptionString` parameter."
     shared actual Description description(Matcher (Object? ) resolver) => StringDescription("StringMatcher");
     
     void appendHexChars(Integer i, StringBuilder sb) {
@@ -150,7 +152,7 @@ shared class StringMatcher(
         return s;
     }
     
-    doc "Perform the match:
+    "Perform the match:
          - succeeds if both actual/expected values are null;
          - fails if only one is null;
          - fails if `actual` is not a T or a subtype of T;
@@ -214,12 +216,12 @@ shared class StringMatcher(
 }
 
 
-doc "Matcher based on '==' comparison"
-by "Jean-Pierre Ragey"
+"Matcher based on '==' comparison"
+by ("Jean-Pierre Ragey")
 shared class EqualsMatcher(
-    doc "Expected value"
+    "Expected value"
     Object? expected, 
-    doc "Descriptor, used to print expected/actual values if they are not equal."
+    "Descriptor, used to print expected/actual values if they are not equal."
     Descriptor descriptor = DefaultDescriptor()
     
     ) extends EqualsOpMatcher<Object>(
@@ -233,12 +235,12 @@ shared class EqualsMatcher(
 {
 }
 
-doc "Matcher based on '===' comparison"
-by "Jean-Pierre Ragey"
+"Matcher based on '===' comparison"
+by ("Jean-Pierre Ragey")
 shared class IdentifiableMatcher(
-    doc "Expected value"
+    "Expected value"
     Identifiable expected, 
-    doc "Descriptor, used to print expected/actual values if they don't refer to the same instance."
+    "Descriptor, used to print expected/actual values if they don't refer to the same instance."
     Descriptor descriptor = DefaultDescriptor()
     
     ) extends EqualsOpMatcher<Identifiable>(
@@ -252,19 +254,19 @@ shared class IdentifiableMatcher(
 {}
 
 
-doc "Matcher for `Iterable` values."
-by "Jean-Pierre Ragey"
+"Matcher for `Iterable` values."
+by ("Jean-Pierre Ragey")
 shared class ListMatcher(
-        doc "Expected elements"
+        "Expected elements"
         {Object? *} expected,
-        doc "Descriptor for elements decriptions " 
+        "Descriptor for elements decriptions " 
         Descriptor descriptor = DefaultDescriptor()
         ) satisfies Matcher 
 {
-    doc "\"ListMatcher\""
+    "\"ListMatcher\""
     shared actual Description description(Matcher (Object? ) resolver) => ValueDescription(normalStyle, "ListMatcher");
     
-    doc "Actual and expected list elements are matched one by one; matchers are found by `matcherResolver`.
+    "Actual and expected list elements are matched one by one; matchers are found by `matcherResolver`.
          It fails if `actual` is not an `Iterable`, if list lengths differ, or if any element match fails.
          "
     shared actual MatcherResult match(Object? actual,
@@ -354,18 +356,18 @@ shared class ListMatcher(
     }
 }
 
-doc "Matcher for `Map`s.
+"Matcher for `Map`s.
      Maps match if:
      - they have the same set of keys;
      - for each key, actual and expected values match.  
      "
-by "Jean-Pierre Ragey"
+by ("Jean-Pierre Ragey")
 shared class MapMatcher<Key, Item>(
-        doc "Expected map"
+        "Expected map"
         Map<Key, Item> expected,
-        //doc "Resolver for values matching" 
+        //"Resolver for values matching" 
         //MatcherResolver matcherResolver = DefaultMatcherResolver(),
-        doc "Descriptor for both keys and simple values." 
+        "Descriptor for both keys and simple values." 
         Descriptor descriptor = DefaultDescriptor()
         
         ) satisfies Matcher 
@@ -373,7 +375,7 @@ shared class MapMatcher<Key, Item>(
         given Item satisfies Object
 {
     
-    doc "\"MapMatcher\""
+    "\"MapMatcher\""
     shared actual Description description(Matcher (Object? ) resolver) => ValueDescription(normalStyle, "MapMatcher");
     
     shared actual MatcherResult match(Object? actual, Matcher (Object? )  matcherResolver) {
@@ -452,46 +454,171 @@ shared class MapMatcher<Key, Item>(
     }
 }
 
-doc "Adapter for a custom class T field, to by used with [[ObjectMatcher]].
-     The field of actual value is returned by `field()`.
-     "
-see "ObjectMatcher"     
-by "Jean-Pierre Ragey"
+"Adapter for a custom class T field, to by used with [[ObjectMatcher]].
+ The field of actual value is returned by `field()`.
+ "
+see ("ObjectMatcher")     
+by ("Jean-Pierre Ragey")
 shared class FieldAdapter<T>(
-    doc "Class field name, for description"
+    "Class field name, for description"
     shared String fieldName,
-    doc "Matcher for the expected field"
+    "Matcher for the expected field"
     shared Matcher matcher,
-    doc "Return the value of the field of `actual`"
+    "Return the value of the field of `actual`"
     shared Object? (T) field
+//    shared Callable<Object|Exception?, [T]> field
     ) 
     given T satisfies Object
 {
+    shared MatcherResult match(T actual, Matcher (Object? ) matcherResolver) {
+        try {
+            Object? actualField = field(actual);
+            return matcher.match(actualField, matcherResolver);
+            
+        } catch (NoSuchFieldException | SecurityException | IllegalArgumentException | IllegalAccessException 
+                 | NoSuchMethodException | InvocationTargetException e) {
+            value descr = StringDescription("an ``className(e)`` occured while accessing field ``fieldName`` of ``className(actual)`` : ``e.message``", highlighted);
+            return MatcherResult(false, descr);
+        }
+        
+    }
 }
 
-doc "Custom class matcher.
-     It checks if actual value is a T (or a subtype of),
-     then use a list of [[FieldAdapter]] to get matchers for its fields and the fields themselves;
-     match succeeds if all field matchers succeed.
-     
-     Matching always fails if the FieldAdapter list is not the same as the class field list - your FieldAdapters
-     must cover ALL the class fields. So if you add a field to a class but forget to update the FieldAdapters, 
-     you're warned.
-     Comparison is currently done only on field names, but this may change as metaprogramming becomes available. 
-     If you want to explicitely ignore some field, use [[AnythingMatcher]].   
-     "
-by "Jean-Pierre Ragey"
+
+
+shared abstract class MissingAdapterStrategy<T>() given T satisfies Object {
+    // We can't create missing FieldAdapters directly because they require a resolver, available in match() only;
+    // so we create builders for them.
+    shared alias AdapterBuilder => FieldAdapter<T> (Matcher /*resolver*/(Object? ) );
+
+    shared formal Description | {AdapterBuilder *} createAdapterBuilders(T expected, {FieldAdapter<T> *} fieldAdapters);
+
+    ""
+    shared default Description | Iterable<FieldAdapter<T>> appendMissingAdapters(T expected, {FieldAdapter<T> *} fieldAdapters, Matcher (Object? ) matcherResolver) {
+        Description | {AdapterBuilder *} adapterBuilders =  createAdapterBuilders(expected, fieldAdapters);
+        if(is Description adapterBuilders) {
+            return adapterBuilders;
+        }
+        assert(is {AdapterBuilder *} adapterBuilders);
+        
+        {FieldAdapter<T> *} missingAdapters = adapterBuilders.map((FieldAdapter<T>(Matcher(Object?)) elem) => elem(matcherResolver)); 
+        
+        // NOTE :  the following lines could be replaced by :
+        //        {FieldAdapter<T> *} currentFieldAdapters = fieldAdapters.chain(missingAdapters);
+        // but chain() return value clashes with type() (Ceylon bug)
+        SequenceBuilder<FieldAdapter<T>> fab = SequenceBuilder<FieldAdapter<T>>();
+        fab.appendAll(fieldAdapters); 
+        fab.appendAll(missingAdapters); 
+        {FieldAdapter<T> *} currentFieldAdapters = fab.sequence;
+        
+        return currentFieldAdapters;
+    }
+}
+class FailForMissingAdapter<T>() extends MissingAdapterStrategy<T>() given T satisfies Object {
+    shared actual Description | {AdapterBuilder *} createAdapterBuilders(T expected, {FieldAdapter<T> *} fieldAdapters) {
+        HashSet<String> adaptersFieldNames = HashSet<String>(fieldAdapters.map((FieldAdapter<T> fa) => fa.fieldName));
+
+        value t = type(expected);
+        ClassDeclaration classDeclaration = t.declaration; 
+        AttributeDeclaration[] attrs = classDeclaration.members<AttributeDeclaration>();
+        Set<String> objectFieldNames = HashSet(attrs.map((AttributeDeclaration decl) => decl.name));
+        
+        Set<String> missingFieldNames = objectFieldNames.complement(adaptersFieldNames);
+        if(!missingFieldNames.empty) {
+            String msg = "Class field(s) without FieldAdapter: `` ", ".join(missingFieldNames) ``";
+            return StringDescription(msg);
+        }
+        return {};
+    }    
+}
+class IgnoreMissingAdapters<T>() extends MissingAdapterStrategy<T>() given T satisfies Object {
+    shared actual Description | {AdapterBuilder *} createAdapterBuilders(T expected, {FieldAdapter<T> *} fieldAdapters) {
+        return {};
+    }    
+}
+class CreateMissingAdapters<T>() extends MissingAdapterStrategy<T>() given T satisfies Object {
+    shared actual Description | {AdapterBuilder *} createAdapterBuilders(T expected, {FieldAdapter<T> *} fieldAdapters) {
+        
+        value t = type(expected);
+        ClassDeclaration classDeclaration = t.declaration; 
+        AttributeDeclaration[] attrs = classDeclaration.members<AttributeDeclaration>();
+        Set<String> objectFieldNames = HashSet(attrs.map((AttributeDeclaration decl) => decl.name));
+        
+        HashSet<String> adaptersFieldNames = HashSet<String>(fieldAdapters.map((FieldAdapter<T> fa) => fa.fieldName));
+        
+        SequenceBuilder<Description> errBuilder = SequenceBuilder<Description>();
+        
+        Set<String> checkedButUndefined = adaptersFieldNames.complement(objectFieldNames);
+        if(!checkedButUndefined.empty) {
+            String msg = "FieldAdapter(s) without class fields: `` ", ".join(checkedButUndefined) ``";
+            errBuilder.append(StringDescription(msg));
+        }
+        
+        SequenceBuilder<AdapterBuilder> missingAdaptersBuilder = SequenceBuilder<AdapterBuilder>();
+
+        Set<String> definedButNotChecked = objectFieldNames.complement(adaptersFieldNames);
+        if(!definedButNotChecked.empty) {
+            
+            for(fieldName in definedButNotChecked) {
+                // 
+                AttributeDeclaration? attrDecl = classDeclaration.getMember<AttributeDeclaration>(fieldName);
+                assert (exists attrDecl);
+                Object? extractor(Object act)  {
+                    Attribute<Anything> attr = attrDecl.apply(act); 
+                    return attr.get() else null;
+                }
+                Object? expectedField = attrDecl.apply(expected).get() else null;
+                AdapterBuilder ab = (Matcher (Object? ) resolver)  => FieldAdapter<T>(fieldName,resolver(expectedField),  extractor);
+                missingAdaptersBuilder.append(ab);
+            }
+        }
+        
+        if(errBuilder.empty) {
+            return missingAdaptersBuilder.sequence;
+        }
+        return TreeDescription(StringDescription("ObjectMatcher<``className(expected)``>: FieldAdapter list and class fields don't match."), 
+                    errBuilder.sequence);
+    }
+}
+
+"Custom class matcher.
+ It checks if actual value is a T (or a subtype of),
+ then use a list of [[FieldAdapter]] to get matchers for its fields and the fields themselves;
+ match succeeds if all field matchers succeed.
+ 
+ 
+ +++ Behaviour for fields that have no adapters depends T being a top-level class or not:
+ - top-level custom classes : ObjectMatcher will provide matchers for these fields, based on the resolver;
+ - other classes: matching fails if a field has no matcher.
+ 
+ 
+ Matching always fails if the FieldAdapter list is not the same as the class field list - your FieldAdapters
+ must cover ALL the class fields. So if you add a field to a class but forget to update the FieldAdapters, 
+ you're warned.
+ Comparison is currently done only on field names, but this may change as metaprogramming becomes available. 
+ If you want to explicitely ignore some field, use [[AnythingMatcher]].   
+ "
+by ("Jean-Pierre Ragey")
 shared class ObjectMatcher<T> (
-        doc "The expected object."
+        "The expected object."
         T expected,
-        doc "Adapters for each field, to get actual objects fields and field matchers."
+        "Adapters for each field, to get actual objects fields and field matchers."
         {FieldAdapter<T> *} fieldAdapters,
-        doc "Descriptor used to describe actual value, if its type doesn't describe the expected one.'"
-        Descriptor descriptor = DefaultDescriptor()
+        "Descriptor used to describe actual value, if its type doesn't describe the expected one.'"
+        Descriptor descriptor = DefaultDescriptor(),
+        
+        "Handling missing field adapters:
+         - always match : ignore missing field adapters
+         - always fails : check ALL fields have an adapter
+         - create adapters from resolver. Note that it fails currently for non top-level classes.
+         "
+//         MissingAdapterStrategy<T> missingAdapterStrategy = CreateMissingAdapters<T>()
+         MissingAdapterStrategy<T> missingAdapterStrategy = IgnoreMissingAdapters<T>()
+        //Boolean createMissingAdapters = true
         ) satisfies Matcher 
         given T satisfies Object
 {
-    doc "\"ObjectMatcher\" (subject to change, may include T name in future)"
+    "\"ObjectMatcher\" (subject to change, may include T name in future)"
     shared actual Description description(Matcher (Object? ) resolver) => StringDescription("ObjectMatcher", normalStyle); 
     
     String simpleClassName(Object obj) {
@@ -499,55 +626,24 @@ shared class ObjectMatcher<T> (
         return cn.split(":", true, true).last else cn;
     }
     
-    Description? checkAllFieldHaveMatchers() {
-        
-        // -- Use java wrapper
-        HashSet<String> fieldNames = HashSet<String>();
-        JIterator<String> it = getFieldNames(expected).iterator();  
-        while (it.hasNext()) {
-            fieldNames.add(it.next());
-        }
-        
-        HashSet<String> checkedFieldNames = HashSet<String>(fieldAdapters.map((FieldAdapter<T> fa) => fa.fieldName));
-        
-        SequenceBuilder<Description> errBuilder = SequenceBuilder<Description>();
-        
-        Set<String> checkedButUndefined = checkedFieldNames.complement(fieldNames);
-        if(!checkedButUndefined.empty) {
-            String msg = "FieldAdapter(s) without class fields: `` ", ".join(checkedButUndefined) ``";
-            errBuilder.append(StringDescription(msg));
-        }
-        
-        Set<String> definedButNotChecked = fieldNames.complement(checkedFieldNames);
-        if(!definedButNotChecked.empty) {
-            String msg = "Class field(s) without FieldAdapter: `` ", ".join(definedButNotChecked) ``";
-            errBuilder.append(StringDescription(msg));
-        }
-        
-        if(errBuilder.empty) {
-            return null;
-        }
-        return TreeDescription(StringDescription("ObjectMatcher<``className(expected)``>: FieldAdapter list and class fields don't match."), 
-                    errBuilder.sequence);
-    }
-
-    Description? badFieldAdaptersDescription = checkAllFieldHaveMatchers();
-    
     
     shared actual MatcherResult match(Object? actual, Matcher (Object? ) matcherResolver) {
         
-        if(exists badFieldAdaptersDescription) {
-            return MatcherResult(false, badFieldAdaptersDescription);
+        Description | Iterable<FieldAdapter<T>> currentFieldAdapters = missingAdapterStrategy.appendMissingAdapters(expected, fieldAdapters, matcherResolver);
+        if(is Description currentFieldAdapters) {
+            return MatcherResult(false, currentFieldAdapters);
         }
+ //       doc("currentFieldAdapters: {FieldAdapter<T> *} expected, found ``currentFieldAdapters then className(currentFieldAdapters) else ""``" +className(currentFieldAdapters))
+        assert(is Iterable<FieldAdapter<T>> currentFieldAdapters);
         
         if(is T actual) {
             
             variable Boolean succeeded = true;
-            SequenceBuilder<ObjectFieldDescription> fieldDescrSb = SequenceBuilder<ObjectFieldDescription>(); 
-            for(fieldMatcher in fieldAdapters) {
+            SequenceBuilder<ObjectFieldDescription> fieldDescrSb = SequenceBuilder<ObjectFieldDescription>();
+            
+            for(fieldMatcher in currentFieldAdapters) {
                 
-                Object? actualField = fieldMatcher.field(actual); 
-                MatcherResult fieldResult = fieldMatcher.matcher.match(actualField, matcherResolver);
+                MatcherResult fieldResult = fieldMatcher.match(actual, matcherResolver);
                 if(fieldResult.failed()) {
                     succeeded = false;
                 }
@@ -583,14 +679,14 @@ Description wrongTypeDescription<T>(
     return d;    
 }
 
-doc "Compound matcher, matches when all children matcher match."
-by "Jean-Pierre Ragey"
+"Compound matcher, matches when all children matcher match."
+by ("Jean-Pierre Ragey")
 shared class AllMatcher (
-        doc "Children matchers"
+        "Children matchers"
         {Matcher *} matchers
         ) satisfies Matcher 
 {
-    doc "AllMatcher short description: \"All\""
+    "AllMatcher short description: \"All\""
     shared actual Description description(Matcher (Object? ) resolver) => StringDescription("All", normalStyle); 
     
     shared actual MatcherResult match(Object? actual, Matcher (Object? ) matcherResolver) {
@@ -618,15 +714,15 @@ shared class AllMatcher (
     
 }
 
-doc "Compound matcher, matches when any child matcher match."
-by "Jean-Pierre Ragey"
+"Compound matcher, matches when any child matcher match."
+by ("Jean-Pierre Ragey")
 shared class AnyMatcher (
-        doc "Children matchers"
+        "Children matchers"
         {Matcher *} matchers
         ) satisfies Matcher 
 {
     
-    doc "AnyMatcher short description: \"Any\""
+    "AnyMatcher short description: \"Any\""
     shared actual Description description(Matcher (Object? ) resolver) => StringDescription("Any"); 
     
     shared actual MatcherResult match(Object? actual, Matcher (Object? ) matcherResolver) {
@@ -658,15 +754,15 @@ shared class AnyMatcher (
     
 }
 
-doc "Matches when child fails, and vice-versa."
-by "Jean-Pierre Ragey"
+"Matches when child fails, and vice-versa."
+by ("Jean-Pierre Ragey")
 shared class NotMatcher (
-        doc "Child matcher"
+        "Child matcher"
         Matcher matcher
         ) satisfies Matcher 
 {
     
-    doc "NotMatcher short description: \"Not\""
+    "NotMatcher short description: \"Not\""
     shared actual Description description(Matcher (Object? ) resolver) => StringDescription("Not", normalStyle); 
     
     shared actual MatcherResult match(Object? actual, Matcher (Object? ) matcherResolver) {
@@ -690,13 +786,13 @@ shared class NotMatcher (
     
 }
 
-doc "Always matches."
-by "Jean-Pierre Ragey"
+"Always matches."
+by ("Jean-Pierre Ragey")
 shared class AnythingMatcher (
         ) satisfies Matcher 
 {
     
-    doc "AnythingMatcher short description: \"Anything\""
+    "AnythingMatcher short description: \"Anything\""
     shared actual Description description(Matcher (Object? ) resolver) => StringDescription("Anything", normalStyle); 
     
     shared actual MatcherResult match(Object? actual, Matcher (Object? ) matcherResolver) {
@@ -708,19 +804,19 @@ shared class AnythingMatcher (
     
 }
 
-doc "Decorates a matcher result with a prefix, to improve readability."
-by "Jean-Pierre Ragey"
+"Decorates a matcher result with a prefix, to improve readability."
+by ("Jean-Pierre Ragey")
 shared class DescribedAsMatcher (
-        doc "Prefix, to be prepended to child matcher match description"
+        "Prefix, to be prepended to child matcher match description"
         Description prefix,
-        doc "Child matcher"
+        "Child matcher"
         Matcher matcher
         ) satisfies Matcher 
 {
-    doc "short description: \"DescribedAs\""
+    "short description: \"DescribedAs\""
     shared actual Description description(Matcher (Object? ) resolver) => StringDescription("DescribedAs", normalStyle); 
     
-    doc "Let the child matcher match `actual`; the result description is the concatenation
+    "Let the child matcher match `actual`; the result description is the concatenation
          of the prefix and the child match result description."
     shared actual MatcherResult match(Object? actual, Matcher (Object? ) matcherResolver) {
    
@@ -732,20 +828,20 @@ shared class DescribedAsMatcher (
     
 }
 
-doc "Match value type, according to `(is T actual)`.
+"Match value type, according to `(is T actual)`.
          void typeMatcherExample() {
             assertThat(\"Hello\", TypeMatcher<String>());
          }
      NOTE: The error message doesn't print T type, since ceylon current version (0.5) has no way of finding T name.
      It may change when metaprogramming is supported. 
      "
-by "Jean-Pierre Ragey"
+by ("Jean-Pierre Ragey")
 shared class TypeMatcher<T> (
-        doc "Descriptor to get actual value description, if matching fails. Defaults to [[DefaultDescriptor]]." 
+        "Descriptor to get actual value description, if matching fails. Defaults to [[DefaultDescriptor]]." 
         Descriptor descriptor = DefaultDescriptor()
         ) satisfies Matcher 
 {
-    doc "\"TypeMatcher\""
+    "\"TypeMatcher\""
     shared actual Description description(Matcher (Object? ) resolver) => StringDescription("TypeMatcher", normalStyle); 
     
     shared actual MatcherResult match(Object? actual, Matcher (Object? ) matcherResolver) {
@@ -771,30 +867,30 @@ shared class TypeMatcher<T> (
     
 }
 
-doc "Matches if actual value is an `Object` (ie if it's not null)"
-by "Jean-Pierre Ragey"
+"Matches if actual value is an `Object` (ie if it's not null)"
+by ("Jean-Pierre Ragey")
 shared class NotNullMatcher (
-        doc "Descriptor for actual value."
+        "Descriptor for actual value."
         Descriptor descriptor = DefaultDescriptor()
         ) extends TypeMatcher<Object> (descriptor) {} 
 
 
-doc "Matcher that delegates matching to an `expected` type dependent matcher, found by `resolver`.
+"Matcher that delegates matching to an `expected` type dependent matcher, found by `resolver`.
      "
-by "Jean-Pierre Ragey"
+by ("Jean-Pierre Ragey")
 shared class Is(
-        doc "Expected value"
+        "Expected value"
         Object? expected
         ) satisfies Matcher {
     
-    doc "Short description, based on the delegate matcher short description."
+    "Short description, based on the delegate matcher short description."
     shared actual Description description(Matcher (Object? ) resolver) => 
         CatDescription{
             StringDescription("Is: ", normalStyle), 
             resolver(expected).description(resolver)
         };
     
-    doc "Delegate matching to [[matcher]]."
+    "Delegate matching to [[matcher]]."
     shared actual MatcherResult match(Object? actual, Matcher (Object? ) resolver) {
         Matcher matcher = resolver(expected);
         return matcher.match(actual, resolver);

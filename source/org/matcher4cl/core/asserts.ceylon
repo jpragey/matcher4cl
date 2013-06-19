@@ -1,35 +1,35 @@
 
-doc "Handler for a match failure."
-by "Jean-Pierre Ragey"
+"Handler for a match failure."
+by ("Jean-Pierre Ragey")
 shared interface ResultHandler {
     shared formal void failed(
-        doc "Result of failed match."
+        "Result of failed match."
         MatcherResult matcherResult,
-        doc "User message, will be typically added to final message. Ignored if null."
+        "User message, will be typically added to final message. Ignored if null."
         String? userMsg = null);
 }
 
-doc "Exception resulting from a mismatch. It is typically thrown by `ThrowingResultHandler`."
-by "Jean-Pierre Ragey"
+"Exception resulting from a mismatch. It is typically thrown by `ThrowingResultHandler`."
+by ("Jean-Pierre Ragey")
 shared class MatchException(
-    doc "Description of the match failure."
+    "Description of the match failure."
     shared Description mismatchDescription,
-    doc "Short (single line) description message, also available as `Exception` `description` property."
+    "Short (single line) description message, also available as `Exception` `description` property."
     shared String shortDescription,
-    doc "Exception that caused this MatchException, or null if none." 
+    "Exception that caused this MatchException, or null if none." 
     Exception? cause=null
     ) extends Exception(shortDescription, cause) 
 {
 }
 
-doc "[[ResultHandler]] that throws a [[MatchException]] when a match fails.
+    "[[ResultHandler]] that throws a [[MatchException]] when a match fails.
      It can also print a multiline failure description.
      "
-by "Jean-Pierre Ragey"
+by ("Jean-Pierre Ragey")
 shared class ThrowingResultHandler(
-    doc "If true (default), [[failed]] will print multiline description, using `printer`."
+    "If true (default), [[failed]] will print multiline description, using `printer`."
     Boolean printMultilineDescr = true,
-    doc "Function to print multiline description; defaults to [[process.writeErrorLine]]"
+    "Function to print multiline description; defaults to [[process.writeErrorLine]]"
     void printer(String multilineDescription)  => process.writeErrorLine(multilineDescription)
 ) satisfies ResultHandler {
     
@@ -43,8 +43,8 @@ shared class ThrowingResultHandler(
         return sb;
     }
     
-    doc "Throws a [[MatchException]] if `matcherResult` shows a mismatch.
-         If constructor `printMultilineDescr` is true, print a multiline description, using `printer`."
+    "Throws a [[MatchException]] if `matcherResult` shows a mismatch.
+     If constructor `printMultilineDescr` is true, print a multiline description, using `printer`."
     shared actual void failed(MatcherResult matcherResult, String? userMsg) {
 
         StringBuilder prefixSb = StringBuilder();
@@ -72,11 +72,11 @@ shared class ThrowingResultHandler(
                     StringBuilder stringBuilder = StringBuilder();
                     
                     textFormat.writeText(stringBuilder, normalStyle, "Reference [``footnode.reference``]:");
-                    textFormat.writeNewLineIndent(stringBuilder, 0 /*indentCount*/);
+                    textFormat.writeNewLineIndent(stringBuilder, 0);
                     String refLine = stringBuilder.string;
                     
                     StringBuilder footnoteMsg = createMessage(textFormat, footnode.description, refLine, DefaultDescriptorEnv() /*not used*/, 0);
-                    textFormat.writeNewLineIndent(footnoteMsg, 0 /*indentCount*/);
+                    textFormat.writeNewLineIndent(footnoteMsg, 0);
                     
                     printer(footnoteMsg.string);
                 }
@@ -89,27 +89,27 @@ shared class ThrowingResultHandler(
 
 
 
-doc "General-purpose assertion.
-     It matches an 'actual' object against a predefined Matcher; if it failed, it let a [[ResultHandler]] react. 
-    "
-by "Jean-Pierre Ragey"
+"General-purpose assertion.
+ It matches an 'actual' object against a predefined Matcher; if it failed, it let a [[ResultHandler]] react. 
+"
+by ("Jean-Pierre Ragey")
 shared void assertThat(
     
-    doc "The object to match."
+    "The object to match."
     Object? actual, 
     
-    doc "The matcher"
+    "The matcher"
     Matcher matcher,
 
     
-    doc "Resolver for values matching" 
+    "Resolver for values matching" 
     Matcher (Object? ) matcherResolver = defaultMatcherResolver(),
     
-    doc "A short message that may be included in the result, if matching failed. 
+    "A short message that may be included in the result, if matching failed. 
          It typically describes the object to assert."
     String? userMsg = null,
 
-    doc "The [[ResultHandler]] to use if matching failed." 
+    "The [[ResultHandler]] to use if matching failed." 
     ResultHandler resultHandler = ThrowingResultHandler()
     ) 
 {

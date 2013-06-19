@@ -10,7 +10,7 @@ String dToS(Description description, TextFormat descriptionWriter = SimpleTextFo
     return s;
 }
 
-doc "ValueDescription test."
+"ValueDescription test."
 void valueDescriptionTest() {
  
     assertEquals("\"hello\"", dToS(ValueDescription(normalStyle, "hello")));
@@ -23,7 +23,7 @@ void valueDescriptionTest() {
     assertEquals("<<<42>>>", dToS(ValueDescription(highlighted /*errorStyle*/, 42)));
 }
 
-doc "ValueDescription test."
+"ValueDescription test."
 void matchDescriptionTest() {
 
     assertEquals("43/<<<42>>>", dToS(MatchDescription(null, highlighted /*matched*/, 43 /*Object? actualObj*/, 42/*Object? expectedObj*/)));
@@ -39,7 +39,7 @@ void matchDescriptionTest() {
 }
 
 
-doc "ListDescription test."
+"ListDescription test."
 void listDescriptionTest() {
     assertEquals("{43/<<<42>>>, 1.999/2, 2}", dToS(ListDescription(null /*failure*/, [
         MatchDescription(null, highlighted , 43, 42), MatchDescription(null, normalStyle, 1.999, 2), MatchDescription(null, normalStyle, 2, 2)])));
@@ -81,7 +81,7 @@ void listDescriptionTest() {
     
 }
 
-doc "ListDescription test."
+"ListDescription test."
 void listDescriptionTest_Tmp2() {
     // -- Multiline
     TextFormat mldw = SimpleTextFormat(true /*multiLine*/);
@@ -96,7 +96,7 @@ void listDescriptionTest_Tmp2() {
     ), mldw));
 }
 
-doc "ListDescription test."
+"ListDescription test."
 void listDescriptionTest_Tmp() {
     // -- Multiline
     TextFormat mldw = SimpleTextFormat(true /*multiLine*/);
@@ -122,14 +122,14 @@ void listDescriptionTest_Tmp() {
     ), mldw));
 }
 
-doc "FormattedDescription test."
+"FormattedDescription test."
 void mapEntryDescriptionTest() {
     assertEquals("\"hello\"->43/<<<42>>>", dToS(MapEntryDescription(
         ValueDescription(normalStyle, "hello"), 
         MatchDescription(null, highlighted , 43, 42))));
 }
 
-doc "ListDescription test."
+"ListDescription test."
 void mapDescriptionTest() {
     
     assertEquals("{\"k0\"->42, \"k1\"->43, \"k2\"->44}", dToS(MapDescription(null /*failure*/, [
@@ -190,14 +190,14 @@ void mapDescriptionTest() {
         )));
 }
 
-doc "FormattedDescription test."
+"FormattedDescription test."
 void objectFieldDescriptionTest() {
     assertEquals("field: (43/<<<42>>>)", dToS(ObjectFieldDescription(
         "field", 
         MatchDescription(null, highlighted , 43, 42))));
 }
 
-doc "ObjectDescription test."
+"ObjectDescription test."
 void objectDescriptionTest() {
     assertEquals("ERR: MyClass field mismatch:  {field0: (42), field1: (43/<<<42>>>)}", dToS(
     ObjectDescription(
