@@ -1,4 +1,4 @@
-import java.lang { arrays, JString = String, JLong = Long, NoSuchFieldException, SecurityException, IllegalArgumentException, IllegalAccessException, NoSuchMethodException, Class }
+import java.lang { arrays, JString = String, JLong = Long, NoSuchFieldException, SecurityException, IllegalArgumentException, IllegalAccessException, NoSuchMethodException, Class, RuntimeException }
 import ceylon.collection { HashSet }
 import java.util { JIterator = Iterator }
 import java.lang.reflect { InvocationTargetException }
@@ -466,7 +466,6 @@ shared class FieldAdapter<T>(
     shared Matcher matcher,
     "Return the value of the field of `actual`"
     shared Object? (T) field
-//    shared Callable<Object|Exception?, [T]> field
     ) 
     given T satisfies Object
 {
@@ -485,7 +484,9 @@ shared class FieldAdapter<T>(
 }
 
 
-
+"Behaviour of [[ObjectMatcher]] when its field adapter list doesn't cover all expected object list.
+ Concrete implementations may return an error, or create suitable adapters (possibly none).
+ "
 shared abstract class MissingAdapterStrategy<T>() given T satisfies Object {
     // We can't create missing FieldAdapters directly because they require a resolver, available in match() only;
     // so we create builders for them.
@@ -514,12 +515,28 @@ shared abstract class MissingAdapterStrategy<T>() given T satisfies Object {
         return currentFieldAdapters;
     }
 }
-class FailForMissingAdapter<T>() extends MissingAdapterStrategy<T>() given T satisfies Object {
+
+"[[MissingAdapterStrategy]] that fails if any field adapter is missing: field adapters are mandatory for ALL fields.
+ 
+ Note that it works only for shared top-level classes and non-shared nested classes (due to current Ceylon metaprogramming limitations). 
+ "
+see ("ObjectMatcher") 
+shared class FailForMissingAdapter<T>() extends MissingAdapterStrategy<T>() given T satisfies Object {
     shared actual Description | {AdapterBuilder *} createAdapterBuilders(T expected, {FieldAdapter<T> *} fieldAdapters) {
         HashSet<String> adaptersFieldNames = HashSet<String>(fieldAdapters.map((FieldAdapter<T> fa) => fa.fieldName));
 
         value t = type(expected);
-        ClassDeclaration classDeclaration = t.declaration; 
+        ClassDeclaration classDeclaration;
+        try {
+            classDeclaration = t.declaration;
+        } catch (RuntimeException e) {
+            return TreeDescription(StringDescription(e.message), [ 
+                StringDescription("A RuntimeException occured while getting expected type declaration. "),
+                StringDescription("Note that ObjectMatcher with FailForMissingAdapter strategy only supports top-level shared classes (Ceylon current limitation)."),
+                StringDescription("In this case, consider using IgnoreMissingAdapters and defining adapters for all fields.")
+            ]);
+        }
+    
         AttributeDeclaration[] attrs = classDeclaration.members<AttributeDeclaration>();
         Set<String> objectFieldNames = HashSet(attrs.map((AttributeDeclaration decl) => decl.name));
         
@@ -531,16 +548,35 @@ class FailForMissingAdapter<T>() extends MissingAdapterStrategy<T>() given T sat
         return {};
     }    
 }
-class IgnoreMissingAdapters<T>() extends MissingAdapterStrategy<T>() given T satisfies Object {
+"[[MissingAdapterStrategy]] that doesn't care about missing field adapters: field adapters are always optional.
+ "
+see ("ObjectMatcher") 
+shared class IgnoreMissingAdapters<T>() extends MissingAdapterStrategy<T>() given T satisfies Object {
     shared actual Description | {AdapterBuilder *} createAdapterBuilders(T expected, {FieldAdapter<T> *} fieldAdapters) {
         return {};
     }    
 }
-class CreateMissingAdapters<T>() extends MissingAdapterStrategy<T>() given T satisfies Object {
+"[[MissingAdapterStrategy]] that creates adapters for missing fields, using metamodel.
+ Field names come from the metamodel, and field matchers are created by the ObjectMatcher.match() resolver argument.
+ 
+ Note that it works only for shared top-level classes (due to current Ceylon metaprogramming limitations). 
+ "
+see ("ObjectMatcher") 
+shared class CreateMissingAdapters<T>() extends MissingAdapterStrategy<T>() given T satisfies Object {
     shared actual Description | {AdapterBuilder *} createAdapterBuilders(T expected, {FieldAdapter<T> *} fieldAdapters) {
         
         value t = type(expected);
-        ClassDeclaration classDeclaration = t.declaration; 
+        ClassDeclaration classDeclaration;
+        try {
+            classDeclaration = t.declaration;
+        } catch (RuntimeException e) {
+            return TreeDescription(StringDescription(e.message), [ 
+                StringDescription("A RuntimeException occured while getting expected type declaration. "),
+                StringDescription("Note that ObjectMatcher with CreateMissingAdapters strategy only supports top-level shared classes (Ceylon current limitation)."),
+                StringDescription("In this case, consider using IgnoreMissingAdapters and defining adapters for all fields.")
+            ]);
+        }
+        
         AttributeDeclaration[] attrs = classDeclaration.members<AttributeDeclaration>();
         Set<String> objectFieldNames = HashSet(attrs.map((AttributeDeclaration decl) => decl.name));
         
@@ -567,7 +603,17 @@ class CreateMissingAdapters<T>() extends MissingAdapterStrategy<T>() given T sat
                     Attribute<Anything> attr = attrDecl.apply(act); 
                     return attr.get() else null;
                 }
-                Object? expectedField = attrDecl.apply(expected).get() else null;
+                Object? expectedField;
+                try {
+                    expectedField = attrDecl.apply(expected).get() else null;
+                } catch (RuntimeException e) {
+                    return TreeDescription(StringDescription(e.message), [ 
+                        StringDescription("A RuntimeException occured while getting field ``fieldName`` of expected object of type ``classDeclaration.name``. "),
+                        StringDescription("Note that ObjectMatcher with CreateMissingAdapters strategy only supports top-level shared classes (Ceylon current limitation)."),
+                        StringDescription("In this case, consider using IgnoreMissingAdapters and defining adapters for all fields.")
+                    ]);
+                    
+                }
                 AdapterBuilder ab = (Matcher (Object? ) resolver)  => FieldAdapter<T>(fieldName,resolver(expectedField),  extractor);
                 missingAdaptersBuilder.append(ab);
             }
@@ -575,9 +621,10 @@ class CreateMissingAdapters<T>() extends MissingAdapterStrategy<T>() given T sat
         
         if(errBuilder.empty) {
             return missingAdaptersBuilder.sequence;
+        } else {
+            return TreeDescription(StringDescription("ObjectMatcher<``className(expected)``>: FieldAdapter list and class fields don't match."), 
+                        errBuilder.sequence);
         }
-        return TreeDescription(StringDescription("ObjectMatcher<``className(expected)``>: FieldAdapter list and class fields don't match."), 
-                    errBuilder.sequence);
     }
 }
 
@@ -586,16 +633,25 @@ class CreateMissingAdapters<T>() extends MissingAdapterStrategy<T>() given T sat
  then use a list of [[FieldAdapter]] to get matchers for its fields and the fields themselves;
  match succeeds if all field matchers succeed.
  
+ The `fieldAdapters` list may not exaclty match the tested class field; [[missingAdapterStrategy]] 
+ handles these differences:
+ - by default, [[CreateMissingAdapters]] is used; it reports adapters with names of non-existing fields,
+   and tries to create missing adapters, based on metaprogramming and using the matcher resolver to create the field matchers;
+ - [[FailForMissingAdapter]] (fails if any field has no adapter) and [[IgnoreMissingAdapters]] (doesn't care about missing adapters) 
+   can also be used. 
  
- +++ Behaviour for fields that have no adapters depends T being a top-level class or not:
- - top-level custom classes : ObjectMatcher will provide matchers for these fields, based on the resolver;
- - other classes: matching fails if a field has no matcher.
+ NOTE: due to limitations in current Ceylon metaprogramming feature, non-shared or nested classes may lead to RuntimeExceptions 
+ in Ceylon runtime. In this case, you could typically use [[IgnoreMissingAdapters]] (but you loose fields checking - beware to update 
+ field adapters when you add or remove a field to a custom class)
+ Currently working combinations are (roughly):
  
+ <table class = \"table table-bordered\">
+   <tr><td>                      </td><td> shared TopLevel </td><td> non-shared TopLevel </td><td> shared Nested </td><td> non-shared Nested </td></tr>
+   <tr><td>FailForMissingAdapter </td><td>        OK       </td><td>       -             </td><td>      -        </td><td>       OK          </td></tr>
+   <tr><td>IgnoreMissingAdapters </td><td>        OK       </td><td>       OK            </td><td>      OK       </td><td>       OK          </td></tr>
+   <tr><td>CreateMissingAdapters </td><td>        OK       </td><td>       -             </td><td>      -        </td><td>       -           </td></tr>
+ </table>
  
- Matching always fails if the FieldAdapter list is not the same as the class field list - your FieldAdapters
- must cover ALL the class fields. So if you add a field to a class but forget to update the FieldAdapters, 
- you're warned.
- Comparison is currently done only on field names, but this may change as metaprogramming becomes available. 
  If you want to explicitely ignore some field, use [[AnythingMatcher]].   
  "
 by ("Jean-Pierre Ragey")
@@ -603,18 +659,12 @@ shared class ObjectMatcher<T> (
         "The expected object."
         T expected,
         "Adapters for each field, to get actual objects fields and field matchers."
-        {FieldAdapter<T> *} fieldAdapters,
-        "Descriptor used to describe actual value, if its type doesn't describe the expected one.'"
+        {FieldAdapter<T> *} fieldAdapters = {},
+        "Descriptor used to describe actual value, if its type doesn't describe the expected one."
         Descriptor descriptor = DefaultDescriptor(),
         
-        "Handling missing field adapters:
-         - always match : ignore missing field adapters
-         - always fails : check ALL fields have an adapter
-         - create adapters from resolver. Note that it fails currently for non top-level classes.
-         "
-//         MissingAdapterStrategy<T> missingAdapterStrategy = CreateMissingAdapters<T>()
-         MissingAdapterStrategy<T> missingAdapterStrategy = IgnoreMissingAdapters<T>()
-        //Boolean createMissingAdapters = true
+        "Handling of missing field adapters"
+         MissingAdapterStrategy<T> missingAdapterStrategy = CreateMissingAdapters<T>()
         ) satisfies Matcher 
         given T satisfies Object
 {

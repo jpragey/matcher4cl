@@ -5,18 +5,29 @@
      Its most common usage is probably testing, when the actual result of an expression must match an expected value,
      otherwise an exception is thrown, carrying some meaningfull mismatch description.
      So let's go:
-     
          import org.matcher4cl.core { assertThat, Is }
          void doTest() {
             assertThat (\"The actual value\", Is(\"The expected one\"));
          }
-     
      Run it as a usual ceylon application, and you'll get  an exception stating:
          \"The expected one\"/<<<\"The actual value\">>>: expected[4]='e'(101=#65) != actual[4]='a'(97=#61)
      
      The \"&lt;&lt;&lt; &gt;&gt;&gt;\" is ASCII art for highlighting; the string matcher describe the first mismatching character, convenient 
      for differentiating non conventional chars (eg space (#20) and non-breaking space (#A0)).  
       
+     To use it with custom classes:
+         shared class Country(shared String name, shared String capital) {}
+
+         void countryTest() {
+            assertThat(       Country(\"USA\", \"New york\"),   // Lower case 'y'
+                ObjectMatcher(Country(\"USA\", \"New York\"))
+            );
+         }
+     The result is:
+         <<<Country>>> {capital: (\"New York\"/<<<\"New york\">>>: expected[4]='Y'(89=#59) != actual[4]='y'(121=#79)), name: (\"USA\")}
+     
+     What if you need to compare more complex structures? Well, you need a bit of infrastructure:
+     
      In Eclipse, you can run it as a usual Ceylon test, if the ceylon test plugin is installed.
      
      The basic usage pattern consists in writing all customizations once, and just use \"assertThat (actual, Is(expected));\" for all tests;
