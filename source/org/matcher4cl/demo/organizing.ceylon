@@ -2,7 +2,7 @@ import org.matcher4cl.core { Descriptor, DefaultDescriptor, DescriptorEnv, Match
 import org.matcher4cl.core { defaultAssertThat = assertThat, Is}
 
 // Some custom class
-class MyClass(shared String text) {}
+shared class MyClass(shared String text) {}
 
 // Customization repository
 object testTools {

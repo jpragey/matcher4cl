@@ -414,12 +414,23 @@ shared class MapMatcher<Key, Item>(
                     prefix = CatDescription{
                         StringDescription("Value mismatch for "),
                         itemMatcher.description(matcherResolver),
-                        StringDescription(": ", highlighted)
+                        StringDescription(": ", normalStyle)
                     };   
                 }
                 
                 MatchDescription md = MatchDescription(prefix, matchStyle(matched), expectedItem, actualItem, descriptor);
-                MapEntryDescription med = MapEntryDescription(ValueDescription(normalStyle, key, descriptor), md);
+                
+                Description fd;
+                if(!matched) {
+                    fd = TreeDescription(md, {
+                        StringDescription("Cause:"), 
+                        mr.matchDescription
+                    });
+                } else {
+                    fd = md;
+                }
+                
+                MapEntryDescription med = MapEntryDescription(ValueDescription(normalStyle, key, descriptor), fd);
                 
                 elementsDescrSb.append(med);
                 

@@ -56,8 +56,13 @@ shared class ThrowingResultHandler(
         
         // -- Create short message
         if(matcherResult.failed()) {
+            value slTextFormat = SimpleTextFormat {
+                    multiLine = false;
+                    indent = "";
+                    constantIndent = " ";
+            }; 
+            StringBuilder shortMsg = createMessage(slTextFormat, matcherResult.matchDescription, prefix, DefaultDescriptorEnv() /*not used*/);
             
-            StringBuilder shortMsg = createMessage(SimpleTextFormat(false /*multiLine*/, ""/*indent*/), matcherResult.matchDescription, prefix, DefaultDescriptorEnv() /*not used*/);
             
             if(printMultilineDescr) {
                 TextFormat textFormat = SimpleTextFormat(true /*multiLine*/, "  "/*indent*/);

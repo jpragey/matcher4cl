@@ -540,7 +540,7 @@
      First create an object to hold all custom resilver/matchers:
      
          // Some custom class
-         class MyClass(shared String text) {}
+         shared class MyClass(shared String text) {}
         
          // Customization repository
          object testTools {

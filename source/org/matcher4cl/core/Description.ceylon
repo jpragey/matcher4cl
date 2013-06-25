@@ -95,6 +95,8 @@ shared class StringDescription(
     shared actual void appendTo(StringBuilder stringBuilder, TextFormat textFormat, Integer depth, DescriptorEnv descriptorEnv) {
         textFormat.writeText(stringBuilder, textStyle, val);
     } 
+    
+    shared actual String string => val;
 }
 
 "Concatenation of descriptions. Resulting text is the concatenation of description texts."
@@ -113,6 +115,12 @@ shared class CatDescription(
             d.appendTo(stringBuilder, textFormat, depth /*keep same depth*/, descriptorEnv);
         }
     } 
+    
+    shared actual String string {
+        value sb = StringBuilder();
+        for(d in descriptions) {sb.append(d.string);}
+        return sb.string;
+    }
 }
 
 
@@ -255,10 +263,10 @@ shared class TreeDescription(
     "Node description."
     Description description,
     "Subnodes descriptions."
-    [Description*] commonElementDescrs
+    {Description*} children
 ) satisfies Description {
     
-    shared actual Integer level = maxLevel(commonElementDescrs) + 1;
+    shared actual Integer level = maxLevel(children) + 1;
     
     void appendList(StringBuilder stringBuilder, TextFormat textFormat, Description nodeDescription, {Description*} descriptions, Integer depth, DescriptorEnv descriptorEnv) {
         
@@ -271,7 +279,7 @@ shared class TreeDescription(
     }
 
     shared actual void appendTo(StringBuilder stringBuilder, TextFormat textFormat, Integer depth, DescriptorEnv descriptorEnv) {
-        appendList(stringBuilder, textFormat, description, commonElementDescrs, depth, descriptorEnv);
+        appendList(stringBuilder, textFormat, description, children, depth, descriptorEnv);
     }
 }
 
@@ -297,7 +305,7 @@ shared class ListDescription(
 by ("Jean-Pierre Ragey")
 shared class MapEntryDescription(
     Description keyDescr, 
-    MatchDescription valueDescr) satisfies Description {
+    Description valueDescr) satisfies Description {
     
     shared actual Integer level = maxLevel{keyDescr, valueDescr};
     

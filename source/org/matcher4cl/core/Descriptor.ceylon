@@ -34,7 +34,8 @@ shared interface Descriptor {
         "The object to describe"
         Object? obj,
         "Utilities for description (eg footnotes)" 
-        DescriptorEnv descriptorEnv);
+        DescriptorEnv descriptorEnv
+        );
 }
 
 "Default descriptor:
@@ -44,12 +45,29 @@ shared interface Descriptor {
      This may change in future (eg to improve readability). 
      "
 by ("Jean-Pierre Ragey")
-shared class DefaultDescriptor() satisfies Descriptor {
+shared class DefaultDescriptor(
+
+    shared String ? (Object?, DescriptorEnv) delegate = (Object? obj, DescriptorEnv env) => null
+
+
+) satisfies Descriptor {
     
     shared actual String describe(Object? obj, DescriptorEnv descriptorEnv) {
         
+        if(exists s = delegate(obj, descriptorEnv)) {
+            return s;
+        }
+        
+        
+        
         if(is String obj) {
             return "\"" + obj.string + "\"";
+        }
+        
+        
+        
+        if(is Iterable<Object> obj, !obj.empty) {
+            return "[" +  (", ".join{for(o in obj) describe(o, descriptorEnv)}) +"]";
         }
         
         return obj?.string else "<null>";

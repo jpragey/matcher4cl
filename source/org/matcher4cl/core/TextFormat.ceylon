@@ -32,14 +32,16 @@ shared interface TextFormat {
      "
 by ("Jean-Pierre Ragey")
 shared class SimpleTextFormat(
-        "Multiline mode: if true, CR and indentation will be added by [[writeNewLineIndent]]."
+    "Multiline mode: if true, CR and indentation will be added by [[writeNewLineIndent]]."
     Boolean multiLine, 
-        "The indentation string, also used by [[writeNewLineIndent]]"
+    "The indentation string, also used by [[writeNewLineIndent]]"
     String indent = "    ",
-        "Value prefix, for error highlighting; \"&lt;&lt;&lt;\" by default."
+    "Value prefix, for error highlighting; \"&lt;&lt;&lt;\" by default."
     String highlightStart = "<<<",
-        "Value postfix, for error highlighting; \"&gt;&gt;&gt;\" by default."
-    String highlightEnd = ">>>"
+    "Value postfix, for error highlighting; \"&gt;&gt;&gt;\" by default."
+    String highlightEnd = ">>>",
+    ""
+    String constantIndent = ""
     ) satisfies TextFormat {
     
         "If `multiLine` is true, add a CR and `indentCount` times the `indent` string. 
@@ -47,11 +49,14 @@ shared class SimpleTextFormat(
     shared actual void writeNewLineIndent(StringBuilder stringBuilder, Integer indentCount) {
         if(multiLine) {
             stringBuilder.appendNewline();
+            stringBuilder.append(constantIndent);
             if(indentCount > 0) {
                 for(Integer i in 1..indentCount) {
                     stringBuilder.append(indent);
                 }
             }
+        } else {
+            stringBuilder.append(constantIndent);
         }
     }
         "Append text to `stringBuilder`; if `style` is [[errorStyle]], text is surrounded by `highlightStart` and `highlightEnd`

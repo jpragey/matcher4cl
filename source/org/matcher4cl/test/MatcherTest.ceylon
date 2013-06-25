@@ -80,12 +80,19 @@ void mapMatcherTest() {
 
     // 
     assertFalse(MapMatcher(LazyMap{10->100, 11->101, 12->102}).match(LazyMap{11->1010, 12->102, 13->103}).succeeded);
-    assertEquals("1 values mismatched: {11->Value mismatch for \"==\"<<<: >>>101/<<<1010>>>, 12->102} => ERR 1 expected not in actual list:  {13->/103} => ERR 1 actual not in expected list:  {10->100/}",
+
+//  assertEquals("1 values mismatched: {11->Value mismatch for \"==\"<<<: >>>101/<<<1010>>>, 12->102} => ERR 1 expected not in actual list:  {13->/103} => ERR 1 actual not in expected list:  {10->100/}",
+    assertEquals("1 values mismatched: {11->Value mismatch for \"==\": 101/<<<1010>>>Cause:'=='101/<<<1010>>>, 12->102} => ERR 1 expected not in actual list:  {13->/103} => ERR 1 actual not in expected list:  {10->100/}",
         dToS(MapMatcher(LazyMap{10->100, 11->101, 12->102}).match(LazyMap{11->1010, 12->102, 13->103}).matchDescription));
 
     assertFalse(MapMatcher(LazyMap{10->100, 11->101, 12->102}).match(LazyMap{10->100, 11->1010, 12->102}).succeeded);
-    assertEquals("1 values mismatched: {10->100, 11->Value mismatch for \"==\"<<<: >>>101/<<<1010>>>, 12->102}", 
+//    assertEquals("1 values mismatched: {10->100, 11->Value mismatch for \"==\"<<<: >>>101/<<<1010>>>, 12->102}", 
+    assertEquals("1 values mismatched: {10->100, 11->Value mismatch for \"==\": 101/<<<1010>>>Cause:'=='101/<<<1010>>>, 12->102}", 
         dToS(MapMatcher(LazyMap{10->100, 11->101, 12->102}).match(LazyMap{10->100, 11->1010, 12->102}).matchDescription));
+
+
+    assertFalse(MapMatcher(LazyMap{"a"->"b"}).match(LazyMap{"a"->"c"}).succeeded);
+    ////assertEquals("", dToS(MapMatcher(LazyMap{"a"->"b"}).match(LazyMap{"a"->"c"}).matchDescription));
 }
 
 
