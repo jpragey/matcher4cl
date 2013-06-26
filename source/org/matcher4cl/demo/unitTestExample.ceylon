@@ -1,4 +1,4 @@
-import org.matcher4cl.core{ assertThat, Is, ObjectMatcher, Matcher, defaultMatcherResolver, Descriptor, DefaultDescriptor, DescriptorEnv }
+import org.matcher4cl.core{ assertThat, Is, ObjectMatcher, Matcher, defaultResolver, Descriptor, DefaultDescriptor, DescriptorEnv }
 
 
 // -- Simplest test case
@@ -41,7 +41,7 @@ void countryTest2() {
     }
     // Redefine assertThat() to use customResolver and customDescriptor
     void myAssertThat(Object? actual, Matcher matcher)
-            => assertThat(actual, matcher, defaultMatcherResolver({customResolver}, customDescriptor)); 
+            => assertThat(actual, matcher, defaultResolver(customResolver, customDescriptor)); 
 
     // -- The test itself
     // Actual object
@@ -91,14 +91,17 @@ void countryTest3() {
         }
     );
     
-    Matcher? customResolver(Object? expected) {
-      if(is Country expected) {
-          return ObjectMatcher<Country>{expected = expected; descriptor = customDescriptor;};
-      }
-      return null;
-    }
+    Matcher (Object?) resolver = defaultResolver(
+        (Object? expected){
+            if(is Country expected) {
+                return ObjectMatcher<Country>{expected = expected; descriptor = customDescriptor;};
+            }
+            return null;
+        }
+    , customDescriptor);
+    
     void customAssertThat(Object? actual, Matcher matcher)
-            => assertThat(actual, matcher, defaultMatcherResolver({customResolver}, customDescriptor)); 
+            => assertThat(actual, matcher, resolver); 
     
     Map<String, Country> continents = LazyMap<String, Country>{
         "America" -> Country("USA", "New york")

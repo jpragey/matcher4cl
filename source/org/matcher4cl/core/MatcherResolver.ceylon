@@ -8,11 +8,11 @@
      - `Iterable<Object>`: returns an [[ListMatcher]];
      - other objects and `null`s: returns an [[EqualsMatcher]].
      " 
-shared Matcher defaultMatcherResolver(
+shared Matcher defaultResolver(
 
     "Delegate resolvers, will be asked first, in this order.
          If any of then returns a Matcher, this matcher will be used."
-    {Matcher? (Object? ) *} delegates = {},
+    Matcher? (Object? )? delegates = null,
     
     "The descriptor that will be passed to created Matchers."
     Descriptor descriptor = DefaultDescriptor()
@@ -22,10 +22,8 @@ shared Matcher defaultMatcherResolver(
     Object? expected) 
 {
 
-    for(d in delegates) {
-        if(exists m = d(expected)) {
-            return m; 
-        }
+    if(exists delegates, exists m = delegates(expected)) {
+        return m; 
     }
 
     // -- String (BEFORE collections, as String are lists of characters...)         

@@ -108,7 +108,7 @@ shared void assertThat(
 
     
     "Resolver for values matching" 
-    Matcher (Object? ) matcherResolver = defaultMatcherResolver(),
+    Matcher (Object? ) matcherResolver = defaultResolver(),
     
     "A short message that may be included in the result, if matching failed. 
          It typically describes the object to assert."

@@ -1,4 +1,4 @@
-import org.matcher4cl.core { Descriptor, DefaultDescriptor, DescriptorEnv, Matcher, ObjectMatcher, defaultMatcherResolver, EqualsMatcher, FieldAdapter }
+import org.matcher4cl.core { Descriptor, DefaultDescriptor, DescriptorEnv, Matcher, ObjectMatcher, defaultResolver, EqualsMatcher, FieldAdapter }
 import org.matcher4cl.core { defaultAssertThat = assertThat, Is}
 
 // Some custom class
@@ -32,7 +32,7 @@ object testTools {
     }
     
     // Our custom resolver, returns default matchers if expected if not a User
-    shared Matcher(Object?) resolver = defaultMatcherResolver({customMatcherResolver}, descriptor);
+    shared Matcher(Object?) resolver = defaultResolver(customMatcherResolver, descriptor);
 }    
  
 shared void assertThat(Object? actual, Matcher matcher, String? userMessage= null)

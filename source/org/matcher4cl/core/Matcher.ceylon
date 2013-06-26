@@ -33,7 +33,7 @@ shared interface Matcher {
         Object? actual,
         "Resolver: implementations may use it to get matcher for members. 
              Useful for somewhat generic class matchers, eg matchers for lists or maps."
-        Matcher (Object? ) resolver = defaultMatcherResolver());
+        Matcher (Object? ) resolver = defaultResolver());
     
     "Short one-line description, eg 'operator =='"
     shared formal Description description(Matcher (Object? ) resolver);
