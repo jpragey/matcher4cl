@@ -1,6 +1,6 @@
     "Matcher library for Ceylon.
      
-     # 5 mn introduction
+     # 10 mn introduction
      A matcher is an object that checks that another object is 'equal' to a predefined value. 
      Its most common usage is probably testing, when the actual result of an expression must match an expected value,
      otherwise an exception is thrown, carrying some meaningfull mismatch description.
@@ -26,7 +26,71 @@
      The result is:
          <<<Country>>> {capital: (\"New York\"/<<<\"New york\">>>: expected[4]='Y'(89=#59) != actual[4]='y'(121=#79)), name: (\"USA\")}
      
-     What if you need to compare more complex structures? Well, you need a bit of infrastructure:
+     What if you need to compare more complex structures (eg maps of lists containing custom objects)? Well, you need a bit of infrastructure:
+     
+         import org.matcher4cl.core { defaultAssertThat = assertThat } // Because we'll redefine assertThat()
+
+         // Our custom class
+         shared class Country(shared String name, shared String capital) {}
+        
+         // -- Infrastructure (typically defined once in the project)
+         // Converts objects to String - needed because Country has no suitable \`string\` property
+         object descriptor extends DefaultDescriptor(
+            (Object? obj, DescriptorEnv descriptorEnv) {
+                if(is Country obj) {
+                    return \"Country(\`\`obj.name\`\`: \`\`obj.capital\`\`)\";
+                }
+                return null;
+            }
+         ){}
+        
+         // Helps getting the right matcher for objects embedded in lists, maps, etc
+         Matcher (Object?) resolver = defaultResolver(
+            (Object? expected){
+                if(is Country expected) {
+                    return ObjectMatcher<Country>{expected = expected; descriptor = descriptor;};
+                }
+                return null;
+            }
+         , descriptor);
+        
+         // Redefine assertThat to use our custom resolver
+         void assertThat(Object? actual, Matcher matcher)
+                => defaultAssertThat(actual, matcher, resolver); 
+        
+     Now the tests themselves:
+        
+         void countryTest3() {
+            
+            // -- The test itself
+            assertThat(
+                // Actual object
+                LazyMap<String, {Country*}>{
+                    \"Asia\"    -> [Country(\"China\", \"Beijing\")],
+                    \"America\" -> [Country(\"USA\", \"New york\")],  // Notice 'york' with lower case 'y''
+                    \"Europe\"  -> [Country(\"England\", \"London\"), Country(\"France\", \"Paris\")]
+                }, 
+                // Expected object
+                Is(LazyMap<String, {Country*}>{
+                    \"Asia\"    -> [Country(\"China\", \"Beijing\")],
+                    \"America\" -> [Country(\"USA\", \"New York\")],
+                    \"Europe\"  -> [Country(\"England\", \"London\"), Country(\"France\", \"Paris\")]
+                }));
+        
+         }
+
+     The message depicts the objects structure, with emphasis on what went wrong:
+     
+         1 values mismatched: {
+           \"Asia\"->[Country(China: Beijing)], 
+           \"America\"->Value mismatch for \"ListMatcher\": [Country(USA: New York)]/<<<[Country(USA: New york)]>>>
+               Cause:
+               1 mismatched: {
+                 <<<At position 0 >>>ObjectMatcher: <<<Country>>> {capital: (\"New York\"/<<<\"New york\">>>: expected[4]='Y'(89=#59) != actual[4]='y'(121=#79)), name: (\"USA\")}
+               }, 
+           \"Europe\"->[Country(England: London), Country(France: Paris)]
+         }     
+     
      
      In Eclipse, you can run it as a usual Ceylon test, if the ceylon test plugin is installed.
      
@@ -37,7 +101,7 @@
      - [[assertThat]] get the value to match (of type `Object?`), a [[Matcher]] ([[Is]] here), that will check the value, and an optionnal user message;
      - `Is` examines its argument (the expected value) and delegates matching to another matcher, depending on the value type. 
         For String is uses [[StringMatcher]], which uses '==';
-     - `assertThat()` calls the matcher `match(Object? actual)` method, that match the actual value against the `Is()` argument, 
+     - `assertThat()` calls the matcher `match(Object? actual, Matcher(Object?) resolver)` method, that match the actual value against the `Is()` argument, 
        and return an [[MatcherResult]]. `MatcherResult` simply wraps a matched/not matched boolean, and a [[Description]] of what happened.
        `Description` is tree of objects describing the match, that can be translated later to various formats (short/long messages, text/html, etc).  
      - if matching failed, `assertThat()` delegates failure management to a [[ResultHandler]] implementation; by default it's a [[ThrowingResultHandler]];
@@ -54,7 +118,7 @@
          shared interface Matcher {
             shared formal Description description(Matcher (Object? ) resolver);
             shared formal MatcherResult match(Object? actual, 
-                Matcher (Object? ) resolver = defaultMatcherResolver());
+                Matcher (Object? ) resolver = defaultResolver());
          }
      
      - `description()` is a short matcher description (typically less than one line). It is used inside other descriptions, for example 
@@ -74,7 +138,7 @@
      
      Usual matchers are:
      - [[Is]], the swiss knife of matchers: it delegates matching to a suitable matcher, 
-       depending on the expected object type (see [[DefaultMatcherResolver]] doc); 
+       depending on the expected object type; 
      - [[EqualsMatcher]] (uses ==), [[IdentifiableMatcher]] (uses ===), [[NotNullMatcher]]; 
      - [[StringMatcher]]; uses '==' and describes the first non-matching char (Unicode codepoint); 
      - [[ListMatcher]], [[MapMatcher]] for (surprise) lists and maps; 
@@ -126,15 +190,30 @@
               
      ## Custom class matchers
      
-     Simple custom class matchers can be created using [[ObjectMatcher]] and [[FieldAdapter]]. `FieldAdapter` delegates 
+     Custom class matchers can be created using [[ObjectMatcher]] and [[FieldAdapter]]. `FieldAdapter` delegates 
      a single field matching to a field specific matcher; `ObjectMatcher` delegates custom class matching 
-     to a list of FieldAdapter. For example:
+     to a list of FieldAdapter. If a field has no associated FieldAdapter, ObjectMatcher behaviour is delegated to a [[MissingAdapterStrategy]],
+     which may (by default) create a matcher for this field (by reflection). 
+     
+        
+     For example:
+         // Class under test
+         shared class User(shared String name, shared Integer age) {}
+        
+         void customClassTest() {
+            // Our custom matcher - all field matchers are created by reflexion
+            class UserMatcher(User expected) extends ObjectMatcher<User>(expected) {}
+     
+            assertThat(User(\"Ted\", 30), UserMatcher(User(\"John\", 20)));
+         }
+     Result:
+         <<<User>>> {name: (\"John\"/<<<\"Ted\">>> Sizes: actual=3 != expected=4), age: ('=='20/<<<30>>>)}
+     
+     If you need to customize field matching, add explicitely field adapters:
      
          void customClassTest() {
-            // Class under test
-            class User(shared String name, shared Integer age) {}
             
-            // Our custom matcher
+            // Our custom matcher, with explicit field adapters
             class UserMatcher(User expected) extends ObjectMatcher<User>(user, {
                 FieldAdapter<User>(\"name\", EqualsMatcher(expected.name), (User actual)=>actual.name),
                 FieldAdapter<User>(\"age\", EqualsMatcher(expected.age), (User actual)=>actual.age)
@@ -143,9 +222,33 @@
             // The test
             assertThat(null, User(\"Ted\", 30), UserMatcher(User(\"John\", 20)));
          }
+
+     This works well because [[ObjectMatcher]] uses a [[CreateMissingAdapters]] as [[MissingAdapterStrategy]] by default, wich tries 
+     to creates field adapters by reflexion. Reflexion works well with top-level shared classes; for nested or non-shared classes, 
+     or for field matching customization, you may need other [[MissingAdapterStrategy]]:
+     - [[FailForMissingAdapter]]: all fields must have an FieldAdapter, matching fails otherwise; 
+     - [[IgnoreMissingAdapters]]: doesn't care about missing FieldAdapter(s);
+     - [[CreateMissingAdapters]] (default).
      
-     When run you get a \" &lt;&lt;&lt;User&gt;&gt;&gt; {name: ('=='\"John\"/&lt;&lt;&lt;\"Ted\"&gt;&gt;&gt;), age: ('=='20/&lt;&lt;&lt;30&gt;&gt;&gt;)}\"
-     message.
+     Currently [[CreateMissingAdapters]] works only for shared top-level classes; for other classes, use [[IgnoreMissingAdapters]] 
+     (and check the field adapter list is synced with the class). So for a local class:
+     
+         void customClassTest() {
+            // Class under test
+            class User(shared String name, shared Integer age) {}
+            // Our custom matcher
+            class UserMatcher(User expected) extends ObjectMatcher<User>(expected, {
+                FieldAdapter<User>(\"name\", EqualsMatcher(expected.name), (User actual)=>actual.name),
+                FieldAdapter<User>(\"age\", EqualsMatcher(expected.age), (User actual)=>actual.age)
+            }, 
+            DefaultDescriptor(),            // Descriptor: see later 
+            IgnoreMissingAdapters<User>()   // This one works with nested classes
+            ) {}
+            // The test
+            assertThat(User(\"Ted\", 30), UserMatcher(User(\"John\", 20)));
+         }
+
+       
      
      # Resolvers
      
@@ -156,20 +259,17 @@
      Basically creating matchers (what we call 'resolution') is delegated to functions of signature `Matcher (Object? expected)` or `Matcher? (Object? expected)`. 
      They get some expected value, and return some suitable matcher. For example, if expected is a String, it would typically return a [[StringMatcher]] instance.
      
-     The [[defaultMatcherResolver]] function creates a resolver that tries a list of delegate resolvers (for custom classes), and, if no matcher was found, 
+     The [[defaultResolver]] function creates a resolver that tries a list of delegate resolvers (for custom classes), and, if no matcher was found, 
      returns a predefined matcher. It has matchers for usual classes (iterables, maps, strings), and falls back to an '==' based matcher. 
      
      So let's see it in action with previous `User` custom object, by comparing lists of users: first define a custom resolver:
      
-         void customResolverTest() {
-            // Class under test
-            class User(shared String name, shared Integer age) {}
+         // Class under test
+         shared class User(shared String name, shared Integer age) {}
             
-            // Our custom matcher (the same)
-            class UserMatcher(User expected) extends ObjectMatcher<User>(user, {
-                FieldAdapter<User>(\"name\", EqualsMatcher(expected.name), (User actual)=>actual.name),
-                FieldAdapter<User>(\"age\", EqualsMatcher(expected.age), (User actual)=>actual.age)
-            }) {}
+         void customResolverTest() {
+            // Our custom matcher
+            class UserMatcher(User expected) extends ObjectMatcher<User>(expected) {}
             
             // Our custom resolver, returns null if expected if not a User
             Matcher? customMatcherResolver(Object? expected) {
@@ -179,28 +279,21 @@
                 return null;
             }
           
-            // Our custom resolver, returns default matchers if expected if not a User
-            value customResolver = defaultMatcherResolver({customMatcherResolver});
+            // Our custom resolver, returns a default matcher if expected is not a User
+            value customResolver = defaultResolver(customMatcherResolver);
+            // Redefine assertThat for convenience
+            void myAssertThat(Object? actual, Matcher matcher) =>
+                assertThat(actual, matcher, customResolver); 
             
-            // Fire!
-            assertThat(     {User(\"Ted\", 30), User(\"John\", 20)}, 
-                ListMatcher({User(\"Ted\", 30), User(\"John\", 21)}), customResolver);
+            // Compare *collections* of User
+            myAssertThat({User(\"Ted\", 30)}, Is({User(\"John\", 20)}));
          }
      
      Result:
-     
-            1 mismatched: {
-              User {name: (\"Ted\"), age: (30)}, 
-              <<<At position 1 >>>ObjectMatcher: <<<User>>> {name: (\"John\"), age: ('=='21/<<<20>>>)}
-            }
+         1 mismatched: {
+            <<<At position 0 >>>ObjectMatcher: <<<User>>> {name: (\"John\"/<<<\"Ted\">>> Sizes: actual=3 != expected=4), age: ('=='20/<<<30>>>)}
+         }
           
-     We can also use it for `Is()`; it's convenient to define a custom 'assertThat' that use `customResolver`:
-
-         void myAssertThat(Object? actual, Matcher matcher, String? userMsg = null) =>
-            assertThat(actual, matcher, customResolver, userMsg);
-      
-         myAssertThat({User(\"Ted\", 30)}, Is({User(\"John\", 20)}));
-                                                        
      
      # Descriptors
      
@@ -338,8 +431,8 @@
      For example, suppose a User holding a list of Phone objects, with custom descriptors:
      
             // Class under test: User with several phones
-            class Phone(shared String phoneNb) {}
-            class User(shared String name, shared {Phone*} phones) {}
+            shared class Phone(shared String phoneNb) {}
+            shared class User(shared String name, shared {Phone*} phones) {}
             
             object customDescriptor satisfies Descriptor {
                 value default = DefaultDescriptor();
@@ -360,13 +453,9 @@
      as constructor argument, and pass it to its phone list matcher:
      
          // UserMatcher passes the (custom) descriptor to the phones ListMatcher
-         class UserMatcher(User expected, Descriptor descriptor) extends ObjectMatcher<User>(expected, {
-            FieldAdapter<User>(\"name\", EqualsMatcher(expected.name), (User actual)=>actual.name),
-            FieldAdapter<User>(\"phones\", ListMatcher(expected.phones, descriptor), (User actual)=>actual.phones)
-         }) {}
-         class PhoneMatcher(Phone expected) extends ObjectMatcher<Phone>(phone, {
-            FieldAdapter<Phone>(\"nb\", EqualsMatcher(expected.phoneNb), (Phone actual)=>actual.phoneNb)
-         }) {}
+         // Our custom matchers
+         class UserMatcher(User expected, Descriptor descriptor) extends ObjectMatcher<User>(expected) {}
+         class PhoneMatcher(Phone expected) extends ObjectMatcher<Phone>(expected) {}
         
      
          Matcher? customResolver(Object? expected) {

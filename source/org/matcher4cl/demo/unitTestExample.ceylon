@@ -57,31 +57,11 @@ void countryTest2() {
         "America" -> [Country("USA", "New York")],
         "Europe"  -> [Country("England", "London"), Country("France", "Paris")]
     }));
-                /*
-1 values mismatched: {
-  "Asia"->[Country(China: Beijing)], 
-  "America"->Value mismatch for "ListMatcher": [Country(USA: New York)]/<<<[Country(USA: New york)]>>>
-      Cause:
-      1 mismatched: {
-        <<<At position 0 >>>ObjectMatcher: <<<Country>>> {capital: ("New York"/<<<"New york">>>: expected[4]='Y'(89=#59) != actual[4]='y'(121=#79)), name: ("USA")}
-      }, 
-  "Europe"->[Country(England: London), Country(France: Paris)]
-}                
-                */
-    // 1 values mismatched: {
-    //   "Asia"->[org.matcher4cl.demo.Country@ca9890e]/[org.matcher4cl.demo.Country@4ca59c12], 
-    //   "America"->Value mismatch for "ListMatcher": [org.matcher4cl.demo.Country@48059495]/<<<[org.matcher4cl.demo.Country@4e64fca0]>>>
-    //       Cause:
-    //       1 mismatched: {
-    //         <<<At position 0 >>>ObjectMatcher: <<<Country>>> {capital: ("New York"/<<<"New york">>>: expected[4]='Y'(89=#59) != actual[4]='y'(121=#79)), name: ("USA")}
-    //       }, 
-    //   "Europe"->[org.matcher4cl.demo.Country@197d96f9, org.matcher4cl.demo.Country@442c282]/[org.matcher4cl.demo.Country@665de723, org.matcher4cl.demo.Country@1ef1df56]
-    // }
-
-
 }
-void countryTest3() {
 
+void countryTest3() {
+    // -- Infrastructure (typ. defined once in the project)
+    // Converts objects to String - needed because Country has no suitable string property
     value customDescriptor = DefaultDescriptor(
         (Object? obj, DescriptorEnv descriptorEnv) {
             if(is Country obj) {

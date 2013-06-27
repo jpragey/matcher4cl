@@ -31,8 +31,9 @@ shared interface Matcher {
     shared formal MatcherResult match(
         "The value to match."
         Object? actual,
-        "Resolver: implementations may use it to get matcher for members. 
-             Useful for somewhat generic class matchers, eg matchers for lists or maps."
+        "Resolver: function returning a suitable matcher for some expected object.
+         Refinements may use it to get matcher for members. 
+         Useful for somewhat generic class matchers, eg matchers for lists or maps."
         Matcher (Object? ) resolver = defaultResolver());
     
     "Short one-line description, eg 'operator =='"
@@ -951,7 +952,7 @@ shared class Is(
             resolver(expected).description(resolver)
         };
     
-    "Delegate matching to [[matcher]]."
+    "Delegate matching to the matcher returned by `resolver(expected)`."
     shared actual MatcherResult match(Object? actual, Matcher (Object? ) resolver) {
         Matcher matcher = resolver(expected);
         return matcher.match(actual, resolver);
