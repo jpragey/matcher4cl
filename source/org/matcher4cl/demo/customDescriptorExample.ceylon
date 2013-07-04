@@ -16,19 +16,15 @@ void customDescriptorTest() {
     }
 
     // Custom descriptor: customize Complex objects, otherwise delegate to DefaultDescriptor 
-    object descriptor satisfies Descriptor {
-        value default = DefaultDescriptor();
-        shared actual String describe(Object? obj, DescriptorEnv descriptorEnv) {
+    Descriptor descriptor = DefaultDescriptor (
+        // delegate, tried first
+        (Object? obj, DescriptorEnv descriptorEnv) {
             if(is Complex obj) {
-                return "" + obj.re.string + " + " + obj.im.string + "i ";
+                return "``obj.re.string`` + ``obj.im.string``i ";
             }
-            return default.describe(obj, descriptorEnv);
+            return  null;
         }
-    }
-    
-    //assertThat(Complex(1.0, 0.1), Is(Complex(1.0, 0.0)), 
-    //    (Object? expected) => defaultMatcherResolver({}, descriptor)(expected)
-    //    );
+    );
     
     value resolver = (Object? expected) => defaultResolver(null, descriptor)(expected);
     void myAssertThat(Object? actual, Matcher matcher, String? userMsg = null) =>
@@ -74,20 +70,19 @@ Description describeErrorTree(Error error) {
     }
 }
 
-object customDescriptor satisfies Descriptor {
-    value default = DefaultDescriptor();
-    shared actual String describe(Object? obj, DescriptorEnv descriptorEnv) {
+Descriptor customDescriptor = DefaultDescriptor(
+    (Object? obj, DescriptorEnv descriptorEnv) {
         
         if(is Error obj) {
             FootNote footNote = descriptorEnv.newFootNote(describeErrorTree(obj));
             return "Error: ``obj.msg`` (see [``footNote.reference``])";
         }
         if(is AppConfig obj) {
-            return "AppConfig[ " + obj.appParam + " ])";
+            return "AppConfig[ ``obj.appParam`` ])";
         }
-        return default.describe(obj, descriptorEnv);
+        return null;
     }
-}
+);
 
 Matcher? customMatcherResolver(Object? expected) {
     // Add matchers for custom classes

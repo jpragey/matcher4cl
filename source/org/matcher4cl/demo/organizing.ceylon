@@ -8,31 +8,29 @@ shared class MyClass(shared String text) {}
 object testTools {
     
     // Descriptor for all custom classes that requires it
-    object descriptor satisfies Descriptor {
-       value default = DefaultDescriptor();
-       shared actual String describe(Object? obj, DescriptorEnv descriptorEnv) {
+    value descriptor => DefaultDescriptor(
+        (Object? obj, DescriptorEnv descriptorEnv)  {
            // Add descriptions for custom classes that needs one (usually not necessary)
            if(is MyClass obj) {
                return "";   // description of MyClass; create footnote(s) if needed
            }
            // Fallback to default descriptor for other objects
-           return default.describe(obj, descriptorEnv);
-       }
-    }
-    
-    // Resolver for custom classes
-    Matcher? customMatcherResolver(Object? expected) {
-       if(is MyClass expected) {
-           return ObjectMatcher<MyClass>(expected, {
-               // Add a FieldAdapter<MyClass> for each field here
-               FieldAdapter<MyClass>("text", EqualsMatcher(expected.text), (MyClass act) => act.text)
-           }) ;
-       }
-       return null;
-    }
+           return null;
+        });
     
     // Our custom resolver, returns default matchers if expected if not a User
-    shared Matcher(Object?) resolver = defaultResolver(customMatcherResolver, descriptor);
+    shared Matcher(Object?) resolver = defaultResolver(
+        (Object? expected) {
+           if(is MyClass expected) {
+               return ObjectMatcher<MyClass>(expected, {
+                   // Add a FieldAdapter<MyClass> for each field here
+                   FieldAdapter<MyClass>("text", EqualsMatcher(expected.text), (MyClass act) => act.text)
+               }) ;
+           }
+           return null;
+        },
+    descriptor);
+    
 }    
  
 shared void assertThat(Object? actual, Matcher matcher, String? userMessage= null)

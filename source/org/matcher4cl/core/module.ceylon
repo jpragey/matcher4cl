@@ -299,7 +299,7 @@
      
      When generating description messages, you may need to customize the way classes are printed.
      If they have a suitable `string` property, everything is fine, but sometimes they don't 
-     and you can' (or don't want) to add it. Then the solution is to create a custom [[Descriptor]].
+     and you can't (or don't want) to add it. Then the solution is to create a custom [[Descriptor]].
      A `Descriptor` converts an object to a String:
      
          shared interface Descriptor {
@@ -310,7 +310,8 @@
             shared formal FootNote newFootNote(Description description);
          }
 
-     Usually, descriptor defaults to [[DefaultDescriptor]].
+     Usually, descriptor defaults to [[DefaultDescriptor]]. Descriptors customisations is passed as 
+     [[DefaultDescriptor]] first agument (signature is `String?(Object? obj, DescriptorEnv descriptorEnv)`)
      
      For example suppose you need to match complex numbers: 
        
@@ -326,16 +327,17 @@
                     return false;
                 }
             }
-            // Custom descriptor: customize Complex objects, otherwise delegate to DefaultDescriptor 
-            object descriptor satisfies Descriptor {
-                value default = DefaultDescriptor();
-                shared actual String describe(Object? obj, DescriptorEnv descriptorEnv) {
+            // Custom descriptor: customize Complex objects, otherwise use to DefaultDescriptor defaults 
+            Descriptor descriptor = DefaultDescriptor (
+                // delegate, tried first
+                (Object? obj, DescriptorEnv descriptorEnv) {
                     if(is Complex obj) {
-                        return \"\" + obj.re.string + \" + \" + obj.im.string + \"i \";
+                        return \"\``obj.re.string\`\` + \``obj.im.string\``i \";
                     }
-                    return default.describe(obj, descriptorEnv);
+                    return  null; // Use to DefaultDescriptor defaults
                 }
-            }
+            );
+
             // Customize assertThat() 
             value resolver = (Object? expected) => defaultMatcherResolver({}, descriptor)(expected);
             void myAssertThat(Object? actual, Matcher matcher, String? userMsg = null) =>
@@ -390,20 +392,19 @@
     
      So now we can write our custom descriptor:
      
-         object customDescriptor satisfies Descriptor {
-            value default = DefaultDescriptor();
-            shared actual String describe(Object? obj, DescriptorEnv descriptorEnv) {
+         Descriptor customDescriptor = DefaultDescriptor(
+            (Object? obj, DescriptorEnv descriptorEnv) {
                 
                 if(is Error obj) {
                     FootNote footNote = descriptorEnv.newFootNote(describeErrorTree(obj));
                     return \"Error: \`\`obj.msg\`\` (see [\`\`footNote.reference\`\`])\";
                 }
                 if(is AppConfig obj) {
-                    return \"AppConfig[ \" + obj.appParam + \" ])\";
+                    return \"AppConfig[ \``obj.appParam\`` ])\";
                 }
-                return default.describe(obj, descriptorEnv);
+                return null;
             }
-         }
+         );
 
      And if we try an assertion:
          void testConfigFileWithFootnotes() {
@@ -428,72 +429,44 @@
      defaults to [[DefaultDescriptor]]; when they create matchers for objects fields or sub-objects, they simply
      pass them this Descriptor. So if the top-level matcher get a custom Decriptor, all the sub-objects will get it.  
      
-     For example, suppose a User holding a list of Phone objects, with custom descriptors:
+     For example, [[ObjectMatcher]] uses a descriptor to print the actual object if its type differs from the expected object.
+     So to print it with a descriptor, simply construct the ObjectMatcher with the suitable adapter.  
      
-            // Class under test: User with several phones
-            shared class Phone(shared String phoneNb) {}
-            shared class User(shared String name, shared {Phone*} phones) {}
+         // Classes under test
+         shared class User(shared String name) {}
+         shared class Account(shared String userId) {}
+
+         void test() {
+    
+            // Custom descriptor
+            value descriptor = DefaultDescriptor(
+                (Object? obj, DescriptorEnv descriptorEnv) {
+                    switch(obj)
+                    case (is Account) {return \"Account [\``obj.userId\``]\";}
+                    else {return null;}
+            });
+        
+            // The custom matcher(s)
+            value resolver = defaultResolver(
+                (Object? expected) {
+                    switch(expected)
+                    case(is User) {
+                        return ObjectMatcher<User>(expected, {}, descriptor);   // Note: descriptor arg
+                    }
+                    else {return null;}
+                }, 
+                descriptor
+            );
             
-            object customDescriptor satisfies Descriptor {
-                value default = DefaultDescriptor();
-                shared actual String describe(Object? obj, DescriptorEnv descriptorEnv) {
-                    if(is User obj) {
-                        return \"User \" + obj.name + \", phones: \" + obj.phones.string;
-                    }
-                    if(is Phone obj) {
-                        return \"Phone: \" + obj.phoneNb;
-                    }
-                    return default.describe(obj, descriptorEnv);
-                }
-            }
-
-     You can write a custom User matcher that delegates phones matching to a [[ListMatcher]], which in turn delegates to a custom 
-     Phone matcher (assuming a suitable custom resolver). [[ListMatcher]] constructor has a [[Descriptor]] as second argument; 
-     if list sizes differ, it will describe extra elements using this descriptor. So the User matcher needs to have a [[Descriptor]]
-     as constructor argument, and pass it to its phone list matcher:
-     
-         // UserMatcher passes the (custom) descriptor to the phones ListMatcher
-         // Our custom matchers
-         class UserMatcher(User expected, Descriptor descriptor) extends ObjectMatcher<User>(expected) {}
-         class PhoneMatcher(Phone expected) extends ObjectMatcher<Phone>(expected) {}
+            // Simplified by customizing assertThat()
+            void myAssertThat(Object? actual, Matcher matcher, String? userMsg = null) =>
+                assertThat(actual, matcher, resolver, userMsg); 
         
-     
-         Matcher? customResolver(Object? expected) {
-            switch(expected)
-            case(is User) {return UserMatcher(expected, customDescriptor);}
-            case(is Phone) {return PhoneMatcher(expected);}
-            else {return null;}
+            myAssertThat( {Account(\"123456\")}, Is({User(\"Ted\")}));
          }
-         value resolver = defaultMatcherResolver({customResolver}, customDescriptor);
-        
-     Check it:
-     
-         assertThat(     {User(\"Ted\", {Phone(\"00000\")})}, 
-            ListMatcher( {User(\"Ted\", {Phone(\"00000\"), Phone(\"00001\")})}, customDescriptor), resolver);
 
-     Or simplify by customizing assertThat():
-          
-         void myAssertThat(Object? actual, Matcher matcher, String? userMsg = null) =>
-            assertThat(actual, matcher, resolver, userMsg); 
-
-         myAssertThat( {User(\"Ted\", {Phone(\"00000\")})}, 
-                Is(    {User(\"Ted\", {Phone(\"00000\"), Phone(\"00001\")})}));
-
-     
-     The extra element is written as \"Phone: 00001\":
-     
-          1 mismatched: {
-            <<<At position 0 >>>ObjectMatcher: <<<User>>> {
-              name: (\"Ted\"), 
-              phones: (Expected list is longer than actual: 2 expected, 1 actual:  {
-                 Phone {nb: (\"00000\")}
-                } 
-                => ERR 1 expected not in actual list:  {
-                  Phone: 00001
-                })
-            }
-          }
-     
+     The assertion will print the faulty Account as `Account [123456]`; if the ObjectMatcher was built without the `descriptor` argument,
+     it would be something like `org.matcher4cl.demo.customResolver1.Account@4348bd9`.
      
      # Output formats
      
@@ -507,8 +480,9 @@
      Let's have a look into `Description`:
      
          shared interface Description {
-            shared formal void appendTo(StringBuilder stringBuilder, TextFormat textFormat, Integer depth);
+            shared formal void appendTo(StringBuilder stringBuilder, TextFormat textFormat, Integer depth, DescriptorEnv descriptorEnv);
             shared formal Integer level;
+            shared String toString(TextFormat textFormat, DescriptorEnv descriptorEnv = DefaultDescriptorEnv()) {/*skipped*/}
          }
 
      - `level` is (approximatively) the distance from tree node to its deepest leaf. For low values (typ. 0), the description is written 
@@ -626,7 +600,7 @@
      # Organizing tests
      
      If you have many custom classes, with custom resolvers and matchers, you could organise them as follow.
-     First create an object to hold all custom resilver/matchers:
+     First create an object to hold all custom resolvers/matchers:
      
          // Some custom class
          shared class MyClass(shared String text) {}
@@ -635,31 +609,28 @@
          object testTools {
             
             // Descriptor for all custom classes that requires it
-            object descriptor satisfies Descriptor {
-               value default = DefaultDescriptor();
-               shared actual String describe(Object? obj, DescriptorEnv descriptorEnv) {
+            value descriptor => DefaultDescriptor(
+                (Object? obj, DescriptorEnv descriptorEnv)  {
                    // Add descriptions for custom classes that needs one (usually not necessary)
                    if(is MyClass obj) {
                        return \"\";   // description of MyClass; create footnote(s) if needed
                    }
                    // Fallback to default descriptor for other objects
-                   return default.describe(obj, descriptorEnv);
-               }
-            }
+                   return null;
+                });
             
             // Resolver for custom classes
-            Matcher? customMatcherResolver(Object? expected) {
-               if(is MyClass expected) {
-                   return ObjectMatcher<MyClass>(expected, {
-                       // Add a FieldAdapter<MyClass> for each field here
-                       FieldAdapter<MyClass>(\"text\", EqualsMatcher(expected.text), (MyClass act) => act.text)
-                   }) ;
-               }
-               return null;
-            }
-            
-            // Our custom resolver, returns default matchers if expected if not a User
-            shared Matcher(Object?) resolver = defaultMatcherResolver({customMatcherResolver}, descriptor);
+            shared Matcher(Object?) resolver = defaultResolver(
+                (Object? expected) {
+                   if(is MyClass expected) {
+                       return ObjectMatcher<MyClass>(expected, {
+                           // Add a FieldAdapter<MyClass> for each field here (if needed)
+                           FieldAdapter<MyClass>(\"text\", EqualsMatcher(expected.text), (MyClass act) => act.text)
+                       }) ;
+                   }
+                   return null;
+                },
+            descriptor);
          }    
 
      
@@ -677,8 +648,8 @@
             assertThat(42, Is(42));
             assertThat([MyClass(\"a\"), 42, \"Hello\"], Is([MyClass(\"a\"), 43, \"Hello\"]) );
          }
-     
      "
+     
 by ("Jean-Pierre Ragey")
 license ("Apache Software License V2.0") 
 module org.matcher4cl.core '0.1.0' {
