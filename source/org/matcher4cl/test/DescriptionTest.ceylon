@@ -1,8 +1,8 @@
 import ceylon.test { assertEquals }
-import org.matcher4cl.core{ ListDescription, Description, TextFormat, SimpleTextFormat, ValueDescription, normalStyle, highlighted, MatchDescription, MapDescription, MapEntryDescription, StringDescription, ObjectFieldDescription, ObjectDescription, DescriptorEnv, DefaultDescriptorEnv }
+import org.matcher4cl.core{ ListDescription, Description, DescrWriter, SimpleDescrWriter, ValueDescription, normalStyle, highlighted, MatchDescription, MapDescription, MapEntryDescription, StringDescription, ObjectFieldDescription, ObjectDescription, DescriptorEnv, DefaultDescriptorEnv }
 
 
-String dToS(Description description, TextFormat descriptionWriter = SimpleTextFormat(false /*multiLine*/)) {
+String dToS(Description description, DescrWriter descriptionWriter = SimpleDescrWriter(false /*multiLine*/)) {
     StringBuilder sb = StringBuilder();
     DescriptorEnv descriptorEnv = DefaultDescriptorEnv();
     description.appendTo(sb, descriptionWriter, 0, descriptorEnv);
@@ -68,7 +68,7 @@ void listDescriptionTest() {
     
     
     // -- Multiline
-    TextFormat mldw = SimpleTextFormat(true /*multiLine*/);
+    DescrWriter mldw = SimpleDescrWriter(true /*multiLine*/);
     assertEquals("ERR: list size mismatch: 1 expected, 3 actuals:  {43/<<<42>>>}
                    => ERR 2 actual not in expected list:  {<<<100>>>, 101}", 
             dToS(ListDescription(
@@ -84,7 +84,7 @@ void listDescriptionTest() {
 "ListDescription test."
 void listDescriptionTest_Tmp2() {
     // -- Multiline
-    TextFormat mldw = SimpleTextFormat(true /*multiLine*/);
+    DescrWriter mldw = SimpleDescrWriter(true /*multiLine*/);
     assertEquals("ERR: list size mismatch: 1 expected, 3 actuals:  {43/<<<42>>>}
                   ERR 2 actual not in expected list:  {<<<100>>>, 101}",
                    
@@ -99,7 +99,7 @@ void listDescriptionTest_Tmp2() {
 "ListDescription test."
 void listDescriptionTest_Tmp() {
     // -- Multiline
-    TextFormat mldw = SimpleTextFormat(true /*multiLine*/);
+    DescrWriter mldw = SimpleDescrWriter(true /*multiLine*/);
     
     assertEquals("", 
             dToS(ListDescription(

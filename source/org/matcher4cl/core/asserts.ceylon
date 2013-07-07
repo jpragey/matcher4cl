@@ -33,7 +33,7 @@ shared class ThrowingResultHandler(
     void printer(String multilineDescription)  => process.writeErrorLine(multilineDescription)
 ) satisfies ResultHandler {
     
-    StringBuilder createMessage(TextFormat writer, Description description, String prefix, DescriptorEnv descriptorEnv, Integer indentCount = 0) {
+    StringBuilder createMessage(DescrWriter writer, Description description, String prefix, DescriptorEnv descriptorEnv, Integer indentCount = 0) {
         
         StringBuilder sb = StringBuilder();
         
@@ -56,7 +56,7 @@ shared class ThrowingResultHandler(
         
         // -- Create short message
         if(matcherResult.failed()) {
-            value slTextFormat = SimpleTextFormat {
+            value slTextFormat = SimpleDescrWriter {
                     multiLine = false;
                     indent = "";
                     constantIndent = " ";
@@ -65,7 +65,7 @@ shared class ThrowingResultHandler(
             
             
             if(printMultilineDescr) {
-                TextFormat textFormat = SimpleTextFormat(true /*multiLine*/, "  "/*indent*/);
+                DescrWriter textFormat = SimpleDescrWriter(true /*multiLine*/, "  "/*indent*/);
                 
                 // -- Multiline message, collect footnotes 
                 DefaultDescriptorEnv descriptorEnv = DefaultDescriptorEnv();
@@ -105,13 +105,12 @@ shared void assertThat(
     
     "The matcher"
     Matcher matcher,
-
     
     "Resolver for values matching" 
-    Matcher (Object? ) matcherResolver = defaultResolver(),
+    Matcher (Object? ) resolver = defaultResolver(),
     
     "A short message that may be included in the result, if matching failed. 
-         It typically describes the object to assert."
+     It typically describes the object to assert."
     String? userMsg = null,
 
     "The [[ResultHandler]] to use if matching failed." 
@@ -119,7 +118,7 @@ shared void assertThat(
     ) 
 {
 
-    MatcherResult matcherResult = matcher.match(actual, matcherResolver); 
+    MatcherResult matcherResult = matcher.match(actual, resolver); 
 
     if(matcherResult.failed()) {
         resultHandler.failed(matcherResult, userMsg);

@@ -6,12 +6,12 @@ shared abstract class TextStyle() of highlighted |normalStyle {
 }
 
 "Style of text for error highlighting"
-see ("HighlightStyle")
+see ("TextStyle")
 by ("Jean-Pierre Ragey")
 shared object highlighted extends TextStyle() {}
 
 "Style of text for success"
-see ("HighlightStyle")
+see ("TextStyle")
 by ("Jean-Pierre Ragey")
 shared object normalStyle extends TextStyle() {}
 
@@ -38,15 +38,22 @@ shared class FootNote(
     shared Description description) {
 }
 
-"Description of match result."
+"Description of match result.
+ Descriptions are a tree structure explaining how expected and actual objects differ; they are typically created by [[Matcher]]s.
+ Its main method is [[appendTo]], that dump the explanation text(s) to a StringBuilder.
+ 
+ Descriptions are needed because matchers can't write directly the explanation texts: at matching time they ignore
+ _how_ to write - eg if it's plain text or HTML.   
+ "
 by ("Jean-Pierre Ragey")
 shared interface Description  
 {
     
-    "Append this description to `stringBuilder`, using `textFormat` formatting."
+    "Append this description to `stringBuilder`, using `descrWriter` formatting."
     shared formal void appendTo(
-        StringBuilder stringBuilder, 
-        TextFormat textFormat,
+        StringBuilder stringBuilder,
+        "Defines _how_ to write: " 
+        DescrWriter descrWriter,
         "Description node depth (0 for root)" 
         Integer depth,
         DescriptorEnv descriptorEnv);
@@ -54,10 +61,10 @@ shared interface Description
     "Node level (roughly distance to deepest leaf, used for single line/multiline switching)"
     shared formal Integer level;
     
-    "Convert this description to String, using `textFormat` formatting."
-    shared String toString(TextFormat textFormat, DescriptorEnv descriptorEnv = DefaultDescriptorEnv()) {
+    "Convert this description to String, using `descrWriter` formatting."
+    shared String toString(DescrWriter descrWriter, DescriptorEnv descriptorEnv = DefaultDescriptorEnv()) {
         StringBuilder sb = StringBuilder();
-        appendTo(sb, textFormat, 0 /*root level*/, descriptorEnv);
+        appendTo(sb, descrWriter, 0 /*root level*/, descriptorEnv);
         String result = sb.string;
         return result; 
     }
@@ -77,9 +84,9 @@ shared class ValueDescription(
     "Always 0."
     shared actual Integer level = 0;
     
-    shared actual void appendTo(StringBuilder stringBuilder, TextFormat textFormat, Integer depth, DescriptorEnv descriptorEnv) {
+    shared actual void appendTo(StringBuilder stringBuilder, DescrWriter descrWriter, Integer depth, DescriptorEnv descriptorEnv) {
         String s = descriptor.describe(val, descriptorEnv);
-        textFormat.writeText(stringBuilder, textStyle, s);
+        descrWriter.writeText(stringBuilder, textStyle, s);
     } 
 }
 
@@ -92,8 +99,8 @@ shared class StringDescription(
 
     shared actual Integer level = 0;
     
-    shared actual void appendTo(StringBuilder stringBuilder, TextFormat textFormat, Integer depth, DescriptorEnv descriptorEnv) {
-        textFormat.writeText(stringBuilder, textStyle, val);
+    shared actual void appendTo(StringBuilder stringBuilder, DescrWriter descrWriter, Integer depth, DescriptorEnv descriptorEnv) {
+        descrWriter.writeText(stringBuilder, textStyle, val);
     } 
     
     shared actual String string => val;
@@ -110,9 +117,9 @@ shared class CatDescription(
     shared actual Integer level = maxLevel(descriptions);
     
     "Append all descriptions contents to stringBuilder."
-    shared actual void appendTo(StringBuilder stringBuilder, TextFormat textFormat, Integer depth, DescriptorEnv descriptorEnv) {
+    shared actual void appendTo(StringBuilder stringBuilder, DescrWriter descrWriter, Integer depth, DescriptorEnv descriptorEnv) {
         for(Description d in descriptions) {
-            d.appendTo(stringBuilder, textFormat, depth /*keep same depth*/, descriptorEnv);
+            d.appendTo(stringBuilder, descrWriter, depth /*keep same depth*/, descriptorEnv);
         }
     } 
     
@@ -157,10 +164,10 @@ shared class MatchDescription(
          Note that the output value doesn't care if *values* match, it checks only their string representations;
          thus for Float you may get '0.99999999/1.0' even if the matcher decides they are the same.
          "
-    shared actual void appendTo(StringBuilder stringBuilder, TextFormat textFormat, Integer depth, DescriptorEnv descriptorEnv) {
+    shared actual void appendTo(StringBuilder stringBuilder, DescrWriter descrWriter, Integer depth, DescriptorEnv descriptorEnv) {
         
         if(exists prefix) {
-            prefix.appendTo(stringBuilder, textFormat, depth, descriptorEnv);
+            prefix.appendTo(stringBuilder, descrWriter, depth, descriptorEnv);
         }
         
         StringBuilder sb = StringBuilder();
@@ -169,14 +176,14 @@ shared class MatchDescription(
         
         if(writeActual) {
             ValueDescription actDescr = ValueDescription(textStyle, actualObj, descriptor);
-            actDescr.appendTo(sb, textFormat, depth + 1, descriptorEnv);
+            actDescr.appendTo(sb, descrWriter, depth + 1, descriptorEnv);
             actString = sb.string;
         }
         sb.reset();
         
         if(writeExpected) {
             ValueDescription expDescr = ValueDescription(normalStyle, expectedObj, descriptor);
-            expDescr.appendTo(sb, textFormat, depth + 1, descriptorEnv);
+            expDescr.appendTo(sb, descrWriter, depth + 1, descriptorEnv);
             expString = sb.string;
         }
         
@@ -209,47 +216,47 @@ shared class CompoundDescription(
     
     shared actual Integer level = max{maxLevel(commonElementDescrs), maxLevel(extraExpectedDescrs), maxLevel(extraActualDescrs)} + 1;
     
-    void appendList(StringBuilder stringBuilder, TextFormat textFormat, Description? prefix, {Description*} descriptions, Integer depth, DescriptorEnv descriptorEnv) {
+    void appendList(StringBuilder stringBuilder, DescrWriter descrWriter, Description? prefix, {Description*} descriptions, Integer depth, DescriptorEnv descriptorEnv) {
         
         Boolean multiline = level > singleLineLevel;
         
         // -- First line: <indent> prefix '{'
         if(exists prefix) {
-            prefix.appendTo(stringBuilder, textFormat, depth, descriptorEnv);
-            textFormat.writeText(stringBuilder, normalStyle, " ");
+            prefix.appendTo(stringBuilder, descrWriter, depth, descriptorEnv);
+            descrWriter.writeText(stringBuilder, normalStyle, " ");
         }
-        textFormat.writeText(stringBuilder, normalStyle, "{");
+        descrWriter.writeText(stringBuilder, normalStyle, "{");
         
         // -- Element lines: <indent+1> element ','?  
         variable Boolean first = true;
         for(d in descriptions) {
 
             if(!first) {
-                textFormat.writeText(stringBuilder, normalStyle, ", ");
+                descrWriter.writeText(stringBuilder, normalStyle, ", ");
             }
             if(multiline) {
-                textFormat.writeNewLineIndent(stringBuilder, depth+1);
+                descrWriter.writeNewLineIndent(stringBuilder, depth+1);
             }
-            d.appendTo(stringBuilder, textFormat, depth+1, descriptorEnv);
+            d.appendTo(stringBuilder, descrWriter, depth+1, descriptorEnv);
             
             first = false;
         }
         
         // -- End lines: <indent> '}'  
         if(multiline) {
-            textFormat.writeNewLineIndent(stringBuilder, depth);
+            descrWriter.writeNewLineIndent(stringBuilder, depth);
         }
-        textFormat.writeText(stringBuilder, normalStyle, "}");
+        descrWriter.writeText(stringBuilder, normalStyle, "}");
     }
 
-    void writeOptList([Description*] descrs, StringBuilder stringBuilder, TextFormat textFormat, Description description/* Formatter formatter*/, Integer depth, DescriptorEnv descriptorEnv) {
+    void writeOptList([Description*] descrs, StringBuilder stringBuilder, DescrWriter descrWriter, Description description/* Formatter formatter*/, Integer depth, DescriptorEnv descriptorEnv) {
         if(nonempty descrs) {
-            textFormat.writeNewLineIndent(stringBuilder, depth);
-            appendList(stringBuilder, textFormat, description, descrs, depth, descriptorEnv);
+            descrWriter.writeNewLineIndent(stringBuilder, depth);
+            appendList(stringBuilder, descrWriter, description, descrs, depth, descriptorEnv);
         }    
     }
     
-    shared actual void appendTo(StringBuilder stringBuilder, TextFormat descriptionWriter, Integer depth, DescriptorEnv descriptorEnv) {
+    shared actual void appendTo(StringBuilder stringBuilder, DescrWriter descriptionWriter, Integer depth, DescriptorEnv descriptorEnv) {
 
         appendList(stringBuilder, descriptionWriter, prefixDescription, commonElementDescrs, depth, descriptorEnv);
 
@@ -268,18 +275,18 @@ shared class TreeDescription(
     
     shared actual Integer level = maxLevel(children) + 1;
     
-    void appendList(StringBuilder stringBuilder, TextFormat textFormat, Description nodeDescription, {Description*} descriptions, Integer depth, DescriptorEnv descriptorEnv) {
+    void appendList(StringBuilder stringBuilder, DescrWriter descrWriter, Description nodeDescription, {Description*} descriptions, Integer depth, DescriptorEnv descriptorEnv) {
         
-        nodeDescription.appendTo(stringBuilder, textFormat, depth, descriptorEnv);
+        nodeDescription.appendTo(stringBuilder, descrWriter, depth, descriptorEnv);
         
         for(d in descriptions) {
-            textFormat.writeNewLineIndent(stringBuilder, depth+1);
-            d.appendTo(stringBuilder, textFormat, depth+1, descriptorEnv);
+            descrWriter.writeNewLineIndent(stringBuilder, depth+1);
+            d.appendTo(stringBuilder, descrWriter, depth+1, descriptorEnv);
         }
     }
 
-    shared actual void appendTo(StringBuilder stringBuilder, TextFormat textFormat, Integer depth, DescriptorEnv descriptorEnv) {
-        appendList(stringBuilder, textFormat, description, children, depth, descriptorEnv);
+    shared actual void appendTo(StringBuilder stringBuilder, DescrWriter descrWriter, Integer depth, DescriptorEnv descriptorEnv) {
+        appendList(stringBuilder, descrWriter, description, children, depth, descriptorEnv);
     }
 }
 
@@ -309,10 +316,10 @@ shared class MapEntryDescription(
     
     shared actual Integer level = maxLevel{keyDescr, valueDescr};
     
-    shared actual void appendTo(StringBuilder stringBuilder, TextFormat textFormat, Integer depth, DescriptorEnv descriptorEnv) {
-        keyDescr.appendTo(stringBuilder, textFormat, depth + 1, descriptorEnv);
-        textFormat.writeText(stringBuilder, normalStyle, "->");
-        valueDescr.appendTo(stringBuilder, textFormat, depth + 1, descriptorEnv);
+    shared actual void appendTo(StringBuilder stringBuilder, DescrWriter descrWriter, Integer depth, DescriptorEnv descriptorEnv) {
+        keyDescr.appendTo(stringBuilder, descrWriter, depth + 1, descriptorEnv);
+        descrWriter.writeText(stringBuilder, normalStyle, "->");
+        valueDescr.appendTo(stringBuilder, descrWriter, depth + 1, descriptorEnv);
     }
 }
 
@@ -352,12 +359,12 @@ shared class ObjectFieldDescription(
     "Same level as `valueDescription`"
     shared actual Integer level = valueDescription.level;
     
-    shared actual void appendTo(StringBuilder stringBuilder, TextFormat textFormat, Integer depth, DescriptorEnv descriptorEnv) {
+    shared actual void appendTo(StringBuilder stringBuilder, DescrWriter descrWriter, Integer depth, DescriptorEnv descriptorEnv) {
         
-        textFormat.writeText(stringBuilder, normalStyle, fieldName);
-        textFormat.writeText(stringBuilder, normalStyle, ": (");
-        valueDescription.appendTo(stringBuilder, textFormat, depth+1, descriptorEnv);
-        textFormat.writeText(stringBuilder, normalStyle, ")");
+        descrWriter.writeText(stringBuilder, normalStyle, fieldName);
+        descrWriter.writeText(stringBuilder, normalStyle, ": (");
+        valueDescription.appendTo(stringBuilder, descrWriter, depth+1, descriptorEnv);
+        descrWriter.writeText(stringBuilder, normalStyle, ")");
     }
 }
 
@@ -395,10 +402,10 @@ shared class ChildDescription (
     shared actual Integer level = description.level;
     
     "Append to `stringBuilder` the prefix, the \": \" string, and the wrapped description."
-    shared actual void appendTo(StringBuilder stringBuilder, TextFormat textFormat, Integer depth, DescriptorEnv descriptorEnv) {
-        prefix.appendTo(stringBuilder, textFormat, depth+1, descriptorEnv);
-        textFormat.writeText(stringBuilder, normalStyle, ": ");
-        description.appendTo(stringBuilder, textFormat, depth+1, descriptorEnv);
+    shared actual void appendTo(StringBuilder stringBuilder, DescrWriter descrWriter, Integer depth, DescriptorEnv descriptorEnv) {
+        prefix.appendTo(stringBuilder, descrWriter, depth+1, descriptorEnv);
+        descrWriter.writeText(stringBuilder, normalStyle, ": ");
+        description.appendTo(stringBuilder, descrWriter, depth+1, descriptorEnv);
     }
 }
 

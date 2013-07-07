@@ -480,21 +480,21 @@
      Let's have a look into `Description`:
      
          shared interface Description {
-            shared formal void appendTo(StringBuilder stringBuilder, TextFormat textFormat, Integer depth, DescriptorEnv descriptorEnv);
+            shared formal void appendTo(StringBuilder stringBuilder, DescrWriter descrWriter, Integer depth, DescriptorEnv descriptorEnv);
             shared formal Integer level;
-            shared String toString(TextFormat textFormat, DescriptorEnv descriptorEnv = DefaultDescriptorEnv()) {/*skipped*/}
+            shared String toString(DescrWriter descrWriter, DescriptorEnv descriptorEnv = DefaultDescriptorEnv()) {/*skipped*/}
          }
 
      - `level` is (approximatively) the distance from tree node to its deepest leaf. For low values (typ. 0), the description is written 
        on a single line; otherwise chidren nodes are printed on different lines. For example, a list of integers is printed on a single line: 
        integers usually map to [[ValueDescription]], and their level is always 0, as [[ValueDescription]] has no children;
-     - `appendTo` writes the description to `stringBuilder`. It doesn't write directly, but instead calls `textFormat` methods, which takes care 
+     - `appendTo` writes the description to `stringBuilder`. It doesn't write directly, but instead calls `descrWriter` methods, which takes care 
        of indentations and multiline management. `depth` is the distance of the description node from tree root; it determines 
        the number of indentations.
      
-     So, to create the output message, create a suitable `TextFormat`, a `StringBuilder` and call `appendTo()`. The `TextFormat` declaration is:
+     So, to create the output message, create a suitable `descrWriter`, a `StringBuilder` and call `appendTo()`. The `DescrWriter` declaration is:
      
-         shared interface TextFormat {
+         shared interface DescrWriter {
             shared formal void writeText(StringBuilder stringBuilder, TextStyle textStyle, String text); 
             shared formal void writeNewLineIndent(StringBuilder stringBuilder, Integer indentCount); 
          }
@@ -503,17 +503,16 @@
        (eg enclosed in '\\*', or with a red background in HTML...).
      - `writeNewLineIndent` writes a carriage return (or equivalent) in stringBuilder, followed by `indentCount` indentations.
      
-     By default, the `SimpleTextFormat` writes description as single or multiline text, depending on a constructor parameter.
+     By default, the `SimpleDescrWriter` writes description as single or multiline text, depending on a constructor parameter.
      
      ## Example: HTML output.
      
-     We first need a `TextFormat` specialized for HTML:
+     We first need a `DescrWriter` specialized for HTML:
      - text: highlighted errors will be enclosed in a <span> with an \"error\" CSS style; '<', '>' and '&' will be escaped;
      - new line/indent will use `<br/>` and `&nbsp;` ;
      
-     
-             class HtmlTextFormat() satisfies TextFormat {
-                
+             class HtmlDescrWriter() satisfies DescrWriter {
+
                 shared actual void writeNewLineIndent(StringBuilder stringBuilder, Integer indentCount) {
                     stringBuilder.append(\"<br/>\");
                     stringBuilder.appendNewline();  // Optional, makes HTML easier to read
@@ -548,35 +547,35 @@
      
          void writeHtmlFile(Path filePath, Description description) {
             
-            if(is File loc = filePath.resource) {   // Remove existing file, is any
-                loc.delete();
+            if(is File loc = filePath.resource) { // Remove existing file, if any
+                loc.delete();   
             }
                 
             if(is Nil loc = filePath.resource) {
                 File file = loc.createFile();
                 Writer writer = file.writer();
                 writer.write(\"<html><head>
-                              <style type=\\\"text/css\\\">
+                              <style type=\"text/css\">
                                     .error {background-color:#FF183e;}
                               </style>
                               </head><body>\");
                 writer.write(\"<h1>Example report</h1>\");
                 
-                // Write description
+                // write description
                 StringBuilder sb = StringBuilder();
-                DescriptorEnv descriptorEnv = DefaultDescriptorEnv();
-                value format = HtmlTextFormat();
-                description.appendTo(sb, format, 0, descriptorEnv);
+                DefaultDescriptorEnv descriptorEnv = DefaultDescriptorEnv();
+                value dw = HtmlDescrWriter();
+                description.appendTo(sb, dw, 0, descriptorEnv);
                 
                 // Write footnotes
                 for(fn in descriptorEnv.footNotes()) {
-                    format.writeNewLineIndent(sb, 0);
-                    format.writeNewLineIndent(sb, 0);
-                    format.writeText(sb, normalStyle, \"Reference [\``fn.reference\``]:\");
-                    format.writeNewLineIndent(sb, 0);
-                    fn.description.appendTo(sb, format, 0, descriptorEnv);
+                    dw.writeNewLineIndent(sb, 0);
+                    dw.writeNewLineIndent(sb, 0);
+                    dw.writeText(sb, normalStyle, \"Reference [\``fn.reference\``]:\");
+                    dw.writeNewLineIndent(sb, 0);
+                    fn.description.appendTo(sb, dw, 0, descriptorEnv);
                 }
-     
+                
                 writer.write(sb.string);
                 writer.write(\"</body></html>\");
                 writer.close(null);
@@ -596,7 +595,7 @@
                 writeHtmlFile(parsePath(tmpPath).childPath(\"testReport.html\"), e.mismatchDescription);
             }
          }
-     
+         
      # Organizing tests
      
      If you have many custom classes, with custom resolvers and matchers, you could organise them as follow.

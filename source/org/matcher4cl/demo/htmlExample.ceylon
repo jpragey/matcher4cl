@@ -1,8 +1,8 @@
 import ceylon.file { File, Nil, Writer, Path, parsePath }
-import org.matcher4cl.core{ TextFormat, TextStyle, highlighted, assertThat, MatchException, Is, Description, DescriptorEnv, DefaultDescriptorEnv, normalStyle, EqualsMatcher }
+import org.matcher4cl.core{ DescrWriter, TextStyle, highlighted, assertThat, MatchException, Is, Description, DescriptorEnv, DefaultDescriptorEnv, normalStyle, EqualsMatcher }
 import ceylon.collection { HashMap }
     
-class HtmlTextFormat() satisfies TextFormat {
+class HtmlDescrWriter() satisfies DescrWriter {
     
     shared actual void writeNewLineIndent(StringBuilder stringBuilder, Integer indentCount) {
         stringBuilder.append("<br/>");
@@ -34,7 +34,7 @@ class HtmlTextFormat() satisfies TextFormat {
     }
 }
 
-void writeHtmlFile(Path filePath, Description description) {
+void writeHtmlFileNoFootNotes(Path filePath, Description description) {
     
     // -- Create HTML text
     
@@ -55,7 +55,7 @@ void writeHtmlFile(Path filePath, Description description) {
         // write description
         StringBuilder sb = StringBuilder();
         DescriptorEnv descriptorEnv = DefaultDescriptorEnv();
-        value format = HtmlTextFormat();
+        value format = HtmlDescrWriter();
         description.appendTo(sb, format, 0, descriptorEnv);
 
         writer.write(sb.string);
@@ -79,12 +79,10 @@ void htmlExample() {
     }
 }
 
-void writeHtmlFileWithFootNotes(Path filePath, Description description) {
+void writeHtmlFile(Path filePath, Description description) {
     
-    // -- Create HTML text
-    
-    if(is File loc = filePath.resource) {
-        loc.delete();
+    if(is File loc = filePath.resource) { // Remove existing file, if any
+        loc.delete();   
     }
         
     if(is Nil loc = filePath.resource) {
@@ -100,22 +98,20 @@ void writeHtmlFileWithFootNotes(Path filePath, Description description) {
         // write description
         StringBuilder sb = StringBuilder();
         DefaultDescriptorEnv descriptorEnv = DefaultDescriptorEnv();
-        value format = HtmlTextFormat();
-        description.appendTo(sb, format, 0, descriptorEnv);
+        value dw = HtmlDescrWriter();
+        description.appendTo(sb, dw, 0, descriptorEnv);
         
+        // Write footnotes
         for(fn in descriptorEnv.footNotes()) {
-            format.writeNewLineIndent(sb, 0);
-            format.writeNewLineIndent(sb, 0);
-            format.writeText(sb, normalStyle, "Reference [``fn.reference``]:");
-            format.writeNewLineIndent(sb, 0);
-            fn.description.appendTo(sb, format, 0, descriptorEnv);
+            dw.writeNewLineIndent(sb, 0);
+            dw.writeNewLineIndent(sb, 0);
+            dw.writeText(sb, normalStyle, "Reference [``fn.reference``]:");
+            dw.writeNewLineIndent(sb, 0);
+            fn.description.appendTo(sb, dw, 0, descriptorEnv);
         }
         
-        
         writer.write(sb.string);
-        
         writer.write("</body></html>");
-        
         writer.close(null);
     }
 }
@@ -129,7 +125,7 @@ void htmlExampleWithFootNotes() {
     } catch (MatchException e){
         String? tmpPath = process.propertyValue("java.io.tmpdir");
         assert(is String tmpPath);
-        writeHtmlFileWithFootNotes(parsePath(tmpPath).childPath("testReport.html"), e.mismatchDescription);
+        writeHtmlFile(parsePath(tmpPath).childPath("testReport.html"), e.mismatchDescription);
     }
 }
 
