@@ -17,7 +17,7 @@ shared interface DescrWriter {
         ); 
 
     "Add a Carriage Return (or equivalent) to `stringBuilder`, and `indentCount` indentations.
-     Exact behaviour is implementation-dependent (eg in HTML: add a <br/> + some HTML indentation tag).
+     Exact behaviour is implementation-dependent (eg in HTML: add a &lt;br/&gt; + some HTML indentation tag).
      Doing nothing here would lead to a single-line output text.
      "
     shared formal void writeNewLineIndent(

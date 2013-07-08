@@ -132,7 +132,7 @@ shared class CatDescription(
 
 
 "Description of matching result, eg '44', '42/45', 'ERR @2: 42/*45*.
-     See [[appendTo]] for formatting details.
+ See [[appendTo]] for formatting details.
      "
 by ("Jean-Pierre Ragey")
 shared class MatchDescription(
@@ -155,15 +155,15 @@ shared class MatchDescription(
     shared actual Integer level = 0;
     
     "The message to append avoid duplicating actual and expected values. It is organized as follows:
-         - if `prefix` is not null, it is added;
-         - a string is created for actual value, if `writeActual` is true; otherwise it is empty;
-         - a string is created for expected value, if `writeExpected` is true; otherwise it is empty;
-         - if actual and expected values strings are equal, it is added; otherwise both are added,
-           with a separator character (a slash).
-         
-         Note that the output value doesn't care if *values* match, it checks only their string representations;
-         thus for Float you may get '0.99999999/1.0' even if the matcher decides they are the same.
-         "
+     - if `prefix` is not null, it is added;
+     - a string is created for actual value, if `writeActual` is true; otherwise it is empty;
+     - a string is created for expected value, if `writeExpected` is true; otherwise it is empty;
+     - if actual and expected values strings are equal, it is added; otherwise both are added,
+       with a separator character (a slash).
+     
+     Note that the output value doesn't care if *values* match, it checks only their string representations;
+     thus for Float you may get '0.99999999/1.0' even if the matcher decides they are the same.
+     "
     shared actual void appendTo(StringBuilder stringBuilder, DescrWriter descrWriter, Integer depth, DescriptorEnv descriptorEnv) {
         
         if(exists prefix) {
@@ -198,18 +198,18 @@ shared class MatchDescription(
 
 
 "Description with children (lists, maps, objects, etc).
-     May be printed on several lines.
-     "
+ May be printed on several lines.
+ "
 by ("Jean-Pierre Ragey")
 shared class CompoundDescription(
     "Prefix (eg mimatch explanation), if not null."
     Description? prefixDescription,
     "Elements commons to expected and actual lists."
-    [Description*] commonElementDescrs,
+    Description[] commonElementDescrs,
     "Expected elements that are not in actual list"
-    [Description*] extraExpectedDescrs = {},
+    Description[] extraExpectedDescrs = {},
     "Actual elements that are not in expected list"
-    [Description*] extraActualDescrs = {},
+    Description[] extraActualDescrs = {},
     "Nodes at levels higher than `singleLineLevel` will be written on several lines (if the text format allows it)."
     Integer singleLineLevel = 1
 ) satisfies Description {
@@ -249,7 +249,7 @@ shared class CompoundDescription(
         descrWriter.writeText(stringBuilder, normalStyle, "}");
     }
 
-    void writeOptList([Description*] descrs, StringBuilder stringBuilder, DescrWriter descrWriter, Description description/* Formatter formatter*/, Integer depth, DescriptorEnv descriptorEnv) {
+    void writeOptList(Description[] descrs, StringBuilder stringBuilder, DescrWriter descrWriter, Description description/* Formatter formatter*/, Integer depth, DescriptorEnv descriptorEnv) {
         if(nonempty descrs) {
             descrWriter.writeNewLineIndent(stringBuilder, depth);
             appendList(stringBuilder, descrWriter, description, descrs, depth, descriptorEnv);
@@ -291,19 +291,19 @@ shared class TreeDescription(
 }
 
 "List description, as created by [[ListMatcher]].
-     As actual and expected lists length may differ, it also holds 
-     lists of elements from a list not found in the other one. 
+ As actual and expected lists length may differ, it also holds 
+ lists of elements from a list not found in the other one. 
      "
 by ("Jean-Pierre Ragey")
 shared class ListDescription(
     "Explaination of mismatch, if not null."
     Description? failureDescription,
     "Elements commons to expected and actual lists."
-    [Description*] commonDescrs,
+    Description[] commonDescrs,
     "Expected elements that are not in actual list"
-    [Description*] extraExpected = [],
+    Description[] extraExpected = [],
     "Actual elements that are not in expected list"
-    [Description*] extraActual = []
+    Description[] extraActual = []
     ) extends CompoundDescription(failureDescription, commonDescrs, extraExpected, extraActual) 
 {
 }
@@ -324,24 +324,24 @@ shared class MapEntryDescription(
 }
 
 "Map matching description, as created by [[MapMatcher]].
-     Entries with matching keys must be passed in `commonDescrs` (associated expected/actual values may differ);
-     entries whose keys are found only in actual or expected maps must be
-     stored in [[extraActualDescrs]] and [[extraExpectedDescrs]].  
-      
-     It is basically a list of 'common' [[MapEntryDescription]]s, with matching keys.
-     
-     As actual and expected maps sizes may differ, it also holds 
-     lists of entries from a list not found in the other one. 
+ Entries with matching keys must be passed in `commonDescrs` (associated expected/actual values may differ);
+ entries whose keys are found only in actual or expected maps must be
+ stored in [[extraActualDescrs]] and [[extraExpectedDescrs]].  
+  
+ It is basically a list of 'common' [[MapEntryDescription]]s, with matching keys.
+ 
+ As actual and expected maps sizes may differ, it also holds 
+ lists of entries from a list not found in the other one. 
      "
 by ("Jean-Pierre Ragey")
 shared class MapDescription (
     Description ? failureDescription,
     "Common entries descriptions: entry keys always match, but values may differ."
-    [MapEntryDescription *] commonDescrs,
+    MapEntryDescription[] commonDescrs,
     "Actual entries whose keys are not in expected."
-    [MapEntryDescription *] extraActualDescrs = [],
+    MapEntryDescription[] extraActualDescrs = [],
     "Expected entries whose keys are not in actual."
-    [MapEntryDescription *] extraExpectedDescrs = []
+    MapEntryDescription[] extraExpectedDescrs = []
 
     ) extends CompoundDescription(failureDescription, commonDescrs, extraExpectedDescrs, extraActualDescrs) 
 {
@@ -368,23 +368,23 @@ shared class ObjectFieldDescription(
     }
 }
 
-    "Custom object description.
-     It is made of a prefix (describes the object itself) and a list 
-     of [[ObjectFieldDescription]], which describe its fields.
-     "
+"Custom object description.
+ It is made of a prefix (describes the object itself) and a list 
+ of [[ObjectFieldDescription]], which describe its fields.
+ "
 see ("ObjectMatcher")     
 by ("Jean-Pierre Ragey")
 shared class ObjectDescription (
     "Prefix, prepended to object description"
     Description? prefix,
     "Custom object fields"
-    [ObjectFieldDescription*] fields
+    ObjectFieldDescription[] fields
     ) extends CompoundDescription(prefix, fields) 
 { 
 }
 
 "Child description (to be used with [[CompoundDescription]]).
- It's simply a wrapper on another [[Description]]; it append a prefix to output string, 
+ It's simply a wrapper on another [[Description]]; it adds a prefix to output string, 
  so that children descriptions can be differenciated."
 see ("CompoundDescription")
 by ("Jean-Pierre Ragey")
@@ -392,10 +392,7 @@ shared class ChildDescription (
     "Prefix, typically child matcher name (for compound matchers like `AllMatcher`)"
     Description prefix,
     "The description to wrap"
-    Description description,
-    "Descriptor for expected/actual entries keys and values"
-    Descriptor entryDescriptor = DefaultDescriptor()
-    
+    Description description
         ) satisfies Description
 {
     "Same level as wrapped description."

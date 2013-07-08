@@ -426,19 +426,19 @@ void stringMatcherTest() {
     assertTrue(StringMatcher("").match("").succeeded);
 
     
-    assertTrue(StringMatcher("a").match("ab").failed());
+    assertTrue(StringMatcher("a").match("ab").failed);
     assertEquals("\"a\"/<<<\"ab\">>> Sizes: actual=2 != expected=1", 
         dToS(StringMatcher("a").match("ab").matchDescription));
 
-    assertTrue(StringMatcher("ab").match("a").failed());
+    assertTrue(StringMatcher("ab").match("a").failed);
     assertEquals("\"ab\"/<<<\"a\">>> Sizes: actual=1 != expected=2", 
         dToS(StringMatcher("ab").match("a").matchDescription));
 
-    assertTrue(StringMatcher("ab").match(null).failed());
+    assertTrue(StringMatcher("ab").match(null).failed);
     assertEquals("ERR: non-null was expected: \"ab\"/<<<<null>>>>", 
         dToS(StringMatcher("ab").match(null).matchDescription));
 
-    assertTrue(StringMatcher("ab").match(42).failed());
+    assertTrue(StringMatcher("ab").match(42).failed);
     assertEquals("ERR: a String was expected, found ceylon.language::Integer: \"ab\"/<<<42>>>", 
         dToS(StringMatcher("ab").match(42).matchDescription));
 

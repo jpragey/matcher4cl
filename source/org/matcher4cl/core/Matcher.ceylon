@@ -6,28 +6,34 @@ import ceylon.language.metamodel { type, Attribute }
 import ceylon.language.metamodel.declaration { ClassDeclaration, AttributeDeclaration }
 
 
-"Result of a [[Matcher]] match."
+"Result of a [[Matcher]] match.
+ It is basically a wrapper over a boolean (match or not) and a [[Description]] of the (mis)match."
 by ("Jean-Pierre Ragey")
-shared class MatcherResult(succeeded, matchDescription) {
+shared class MatcherResult(
+
     "true if match succeeded, false otherwise."
-    shared Boolean succeeded;
-    
+    shared Boolean succeeded,
+     
     "Description of matched objects. It is typically a tree of [[Description]]s, where [[MatchDescription]] 
-         mark simple values comparisons, and decorated by mismatch indications.
-         Note that it must be present even if matching succeeded, as [[NotMatcher]] uses successful match descriptions
-         as mismatch description."
-    shared Description matchDescription;
-    
-    "Convenient method that returns the opposite of `succeeded`."
-    shared Boolean failed() {
-        return !succeeded;
-    }
+     mark simple values comparisons, and decorated by mismatch indications.
+     Note that it must be present even if matching succeeded, as [[NotMatcher]] uses successful match descriptions
+     as mismatch description."
+    shared Description matchDescription) 
+{
+    "Opposite of `succeeded` (for convenience)."
+    shared Boolean failed => !succeeded;
 }
 
-"Matches an actual value against some criterion (usually an 'expected' value passed to constructor)"
+"Matches an actual value against some criterion (usually an 'expected' value passed to constructor).
+ "
 by ("Jean-Pierre Ragey")
 shared interface Matcher {
-    "Performs the match."
+    
+    "Perform the match.
+     This method is the central one; it creates a [[MatcherResult]] that describes the (mis)match. 
+     The [[MatcherResult]] `description` attribute must be correctly filled in any case (matching or not), as a succesful match
+     is a failure reason for the [[NotMatcher]] matcher.
+     "
     shared formal MatcherResult match(
         "The value to match."
         Object? actual,
@@ -41,19 +47,19 @@ shared interface Matcher {
 }
 
 "Matcher based on comparison between two simple values, like Integer or String. 
-     Subclassing it is a simple way of creating custom simple values matcher.
-     It delegates matching to a method with an equals-like signature:
-     `Description?(T, T)`, that returns null for match, or a mismatch description.
-     
-     For example, you could easily create Matchers:
-     - for numbers with error margin;
-     - for case-insensitive Strings (or insensitive to start/end blanks);
-     - for complex number (think of creating a custom [[Descriptor]] for them),
-       possibly with error margin;
-     etc.
-     
-     If your class is somewhat complex (eg it has fields), [[ObjectMatcher]] may be more appropriate. 
-     "
+ Subclassing it is a simple way of creating custom simple values matcher.
+ It delegates matching to a method with an equals-like signature:
+ `Description?(T, T)`, that returns null for match, or a mismatch description.
+ 
+ For example, you could easily create Matchers:
+ - for numbers with error margin;
+ - for case-insensitive Strings (or insensitive to start/end blanks);
+ - for complex number (think of creating a custom [[Descriptor]] for them),
+   possibly with error margin;
+ etc.
+ 
+ If your class is somewhat complex (eg it has fields), [[ObjectMatcher]] may be more appropriate. 
+ "
 see ("EqualsMatcher", "IdentifiableMatcher")
 by ("Jean-Pierre Ragey")
 shared abstract class EqualsOpMatcher<T>(
@@ -305,7 +311,7 @@ shared class ListMatcher(
                     
                     elementsDescrSb.append(md);
                     
-                    if(mr.failed()) {
+                    if(mr.failed) {
                         mismatchCount++;
                     }
                     
@@ -358,10 +364,10 @@ shared class ListMatcher(
 }
 
 "Matcher for `Map`s.
-     Maps match if:
-     - they have the same set of keys;
-     - for each key, actual and expected values match.  
-     "
+ Maps match if:
+ - they have the same set of keys;
+ - for each key, actual and expected values match.  
+ "
 by ("Jean-Pierre Ragey")
 shared class MapMatcher<Key, Item>(
         "Expected map"
@@ -435,7 +441,7 @@ shared class MapMatcher<Key, Item>(
                 
                 elementsDescrSb.append(med);
                 
-                if(mr.failed()) {
+                if(mr.failed) {
                     mismatchCount++;
                 }
             }
@@ -500,10 +506,11 @@ shared class FieldAdapter<T>(
  Concrete implementations may return an error, or create suitable adapters (possibly none).
  "
 shared abstract class MissingAdapterStrategy<T>() given T satisfies Object {
-    // We can't create missing FieldAdapters directly because they require a resolver, available in match() only;
-    // so we create builders for them.
+    "We can't create missing FieldAdapters directly because they require a resolver, available at latching time only;
+     so we create builders for them."
     shared alias AdapterBuilder => FieldAdapter<T> (Matcher /*resolver*/(Object? ) );
 
+    ""
     shared formal Description | {AdapterBuilder *} createAdapterBuilders(T expected, {FieldAdapter<T> *} fieldAdapters);
 
     ""
@@ -575,8 +582,10 @@ shared class IgnoreMissingAdapters<T>() extends MissingAdapterStrategy<T>() give
  "
 see ("ObjectMatcher") 
 shared class CreateMissingAdapters<T>() extends MissingAdapterStrategy<T>() given T satisfies Object {
+    
     shared actual Description | {AdapterBuilder *} createAdapterBuilders(T expected, {FieldAdapter<T> *} fieldAdapters) {
         
+        // Get a ClassDeclaration for expected object.
         value t = type(expected);
         ClassDeclaration classDeclaration;
         try {
@@ -706,7 +715,7 @@ shared class ObjectMatcher<T> (
             for(fieldMatcher in currentFieldAdapters) {
                 
                 MatcherResult fieldResult = fieldMatcher.match(actual, matcherResolver);
-                if(fieldResult.failed()) {
+                if(fieldResult.failed) {
                     succeeded = false;
                 }
                 fieldDescrSb.append(ObjectFieldDescription(fieldMatcher.fieldName, fieldResult.matchDescription));
@@ -741,22 +750,23 @@ Description wrongTypeDescription<T>(
     return d;    
 }
 
-"Compound matcher, matches when all children matcher match."
+"Compound matcher, matches when all child matchers match."
 by ("Jean-Pierre Ragey")
 shared class AllMatcher (
         "Children matchers"
-        {Matcher *} matchers
+        {Matcher *} children
         ) satisfies Matcher 
 {
     "AllMatcher short description: \"All\""
     shared actual Description description(Matcher (Object? ) resolver) => StringDescription("All", normalStyle); 
     
+    "Succeeds if all child matchers match."
     shared actual MatcherResult match(Object? actual, Matcher (Object? ) matcherResolver) {
         variable value failureCount = 0;
         SequenceBuilder<Description> descrSb = SequenceBuilder<Description>(); 
-        for(matcher in matchers) {
+        for(matcher in children) {
             MatcherResult mr = matcher.match(actual, matcherResolver);
-            if(mr.failed()) {
+            if(mr.failed) {
                 failureCount++;
             }
             descrSb.append(ChildDescription(matcher.description(matcherResolver), mr.matchDescription));        
@@ -764,7 +774,7 @@ shared class AllMatcher (
         
         variable Description prefix;
         if(failureCount > 0) {
-            prefix = StringDescription("AllMatcher: ``failureCount`` mismatch (``matchers.size`` matchers)");
+            prefix = StringDescription("AllMatcher: ``failureCount`` mismatch (``children.size`` matchers)");
         } else {
             prefix = description(matcherResolver);
         }
@@ -780,26 +790,27 @@ shared class AllMatcher (
 by ("Jean-Pierre Ragey")
 shared class AnyMatcher (
         "Children matchers"
-        {Matcher *} matchers
+        {Matcher *} children
         ) satisfies Matcher 
 {
     
     "AnyMatcher short description: \"Any\""
     shared actual Description description(Matcher (Object? ) resolver) => StringDescription("Any"); 
     
+    "Succeeds if any child matcher match."
     shared actual MatcherResult match(Object? actual, Matcher (Object? ) matcherResolver) {
 
         variable value failureCount = 0;
         SequenceBuilder<Description> descrSb = SequenceBuilder<Description>(); 
-        for(matcher in matchers) {
+        for(matcher in children) {
             MatcherResult mr = matcher.match(actual, matcherResolver);
-            if(mr.failed()) {
+            if(mr.failed) {
                 failureCount++;
             }
             descrSb.append(ChildDescription(matcher.description(matcherResolver), mr.matchDescription));        
         }
         
-        Integer matchersSize = matchers.size; 
+        Integer matchersSize = children.size; 
         Boolean succeeded = failureCount < matchersSize;
         variable Description? prefix = null;
         
@@ -857,6 +868,7 @@ shared class AnythingMatcher (
     "AnythingMatcher short description: \"Anything\""
     shared actual Description description(Matcher (Object? ) resolver) => StringDescription("Anything", normalStyle); 
     
+    "Always succeeds."
     shared actual MatcherResult match(Object? actual, Matcher (Object? ) matcherResolver) {
         
         Description descr = StringDescription("Anything", normalStyle);
@@ -891,12 +903,12 @@ shared class DescribedAsMatcher (
 }
 
 "Match value type, according to `(is T actual)`.
-         void typeMatcherExample() {
-            assertThat(\"Hello\", TypeMatcher<String>());
-         }
-     NOTE: The error message doesn't print T type, since ceylon current version (0.5) has no way of finding T name.
-     It may change when metaprogramming is supported. 
-     "
+     void typeMatcherExample() {
+        assertThat(\"Hello\", TypeMatcher<String>());
+     }
+ NOTE: The error message doesn't print T type, since ceylon current version (0.5) has no way of finding T name.
+ It may change when metaprogramming is supported. 
+ "
 by ("Jean-Pierre Ragey")
 shared class TypeMatcher<T> (
         "Descriptor to get actual value description, if matching fails. Defaults to [[DefaultDescriptor]]." 

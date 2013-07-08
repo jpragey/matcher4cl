@@ -1,5 +1,8 @@
 
-"Handler for a match failure."
+"Handler for a match failure.
+ Typically used by assertions (eg [[assertThat]]) to print a mismatch message in some way (text in console, HTML file, etc). 
+ "
+see ("assertThat")
 by ("Jean-Pierre Ragey")
 shared interface ResultHandler {
     shared formal void failed(
@@ -55,7 +58,7 @@ shared class ThrowingResultHandler(
         String prefix = prefixSb.string;
         
         // -- Create short message
-        if(matcherResult.failed()) {
+        if(matcherResult.failed) {
             value slTextFormat = SimpleDescrWriter {
                     multiLine = false;
                     indent = "";
@@ -120,7 +123,7 @@ shared void assertThat(
 
     MatcherResult matcherResult = matcher.match(actual, resolver); 
 
-    if(matcherResult.failed()) {
+    if(matcherResult.failed) {
         resultHandler.failed(matcherResult, userMsg);
     }
 }

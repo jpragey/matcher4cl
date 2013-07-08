@@ -7,8 +7,8 @@ shared interface DescriptorEnv {
 }
 
 "Default descriptor environment.
-     It collects the `FootNote`s created by [[newFootNote]]; they are made available by [[footNotes]]  
-     "
+ It collects the `FootNote`s created by [[newFootNote]]; they are made available by [[footNotes]]  
+ "
 shared class DefaultDescriptorEnv() satisfies DescriptorEnv {
     
     variable Integer refCount = 0;
@@ -29,21 +29,21 @@ shared class DefaultDescriptorEnv() satisfies DescriptorEnv {
 see ("`ValueDescription`")
 by ("Jean-Pierre Ragey")
 shared interface Descriptor {
-    "Return a short decsription of `obj`. "
+    "Return a (short) decsription of `obj`. "
     shared formal String describe(
         "The object to describe"
         Object? obj,
-        "Utilities for description (eg footnotes)" 
+        "Utilities for description (eg to create footnotes)" 
         DescriptorEnv descriptorEnv
         );
 }
 
 "Default descriptor:
-     - null is written as \"&lt;null&gt;\";
-     - Strings are enclosed in double-quotes;
-     - otherwise the object `string` propert is returned.
-     This may change in future (eg to improve readability). 
-     "
+ - null is written as \"&lt;null&gt;\";
+ - Strings are enclosed in double-quotes;
+ - otherwise the object `string` propert is returned.
+ This may change in future (eg to improve readability). 
+ "
 by ("Jean-Pierre Ragey")
 shared class DefaultDescriptor(
 
