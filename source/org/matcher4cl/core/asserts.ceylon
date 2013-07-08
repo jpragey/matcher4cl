@@ -12,7 +12,7 @@ shared interface ResultHandler {
         String? userMsg = null);
 }
 
-"Exception resulting from a mismatch. It is typically thrown by `ThrowingResultHandler`."
+"Exception resulting from a mismatch. It is typically thrown by [[ThrowingResultHandler]]."
 by ("Jean-Pierre Ragey")
 shared class MatchException(
     "Description of the match failure."

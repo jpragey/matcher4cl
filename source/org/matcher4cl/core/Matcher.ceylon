@@ -14,10 +14,7 @@ shared class MatcherResult(
     "true if match succeeded, false otherwise."
     shared Boolean succeeded,
      
-    "Description of matched objects. It is typically a tree of [[Description]]s, where [[MatchDescription]] 
-     mark simple values comparisons, and decorated by mismatch indications.
-     Note that it must be present even if matching succeeded, as [[NotMatcher]] uses successful match descriptions
-     as mismatch description."
+    "Description of actual/expected object matching. It is typically a tree of [[Description]]s."
     shared Description matchDescription) 
 {
     "Opposite of `succeeded` (for convenience)."
@@ -66,7 +63,7 @@ shared abstract class EqualsOpMatcher<T>(
     "The expected value"
     T? expected, 
     "Value comparator: returns null if first arg (expected) matches  the second arg (actual),
-         otherwise return a mismatch description." 
+     otherwise return a mismatch description." 
     Description?(T, T) equals,
     "A short description of the matcher (eg '=='). Suggestion: add matcher parameters, eg error margin."
     String equalsDescriptionString, 
@@ -81,11 +78,11 @@ shared abstract class EqualsOpMatcher<T>(
     shared actual Description description(Matcher (Object? ) resolver) => ValueDescription(normalStyle, equalsDescriptionString);
     
     "Perform the match:
-         - succeeds if both actual/expected values are null;
-         - fails if only one is null;
-         - fails if `actual` is not a T or a subtype of T;
-         - if both are non-null, delegate matching to the `equals` constructor parameter. 
-         "
+     - succeeds if both actual/expected values are null;
+     - fails if only one is null;
+     - fails if `actual` is not a T or a subtype of T;
+     - if both are non-null, delegate matching to the `equals` constructor parameter. 
+     "
     shared actual MatcherResult match(Object? actual,
         
         Matcher (Object? ) matcherResolver) {
@@ -124,14 +121,15 @@ shared abstract class EqualsOpMatcher<T>(
     }
 }
 
-"Matcher for String"
+"Matcher for String.
+ If actual/expected strings differ, the first different character Unicode codepoints are added to description (in decimal and hexadecimal)."
 by ("Jean-Pierre Ragey")
 shared class StringMatcher(
     "The expected value"
     String expected,
     
     "Converts actual and expected values before processing. For example, if you use `(String s) => s.uppercased`, 
-         matching will be case insensitive."
+     matching will be case insensitive."
     String(String) convert = (String s) => s,
        
     "Descriptor for actual values formatting"
@@ -139,7 +137,7 @@ shared class StringMatcher(
     ) satisfies Matcher 
 {
     
-    "Same content as constructor `equalsDescriptionString` parameter."
+    "Always \"StringMatcher\"."
     shared actual Description description(Matcher (Object? ) resolver) => StringDescription("StringMatcher");
     
     void appendHexChars(Integer i, StringBuilder sb) {
@@ -160,11 +158,10 @@ shared class StringMatcher(
     }
     
     "Perform the match:
-         - succeeds if both actual/expected values are null;
-         - fails if only one is null;
-         - fails if `actual` is not a T or a subtype of T;
-         - if both are non-null, delegate matching to the `equals` constructor parameter. 
-         "
+     - first, if `actual` is not a String or a subtype of String, fails;
+     - then, `actual` and `expected` are converted by `convert()`;
+     - the results are then compared by '=='. If it fails, sizes are compared, then converted strings are compared char by char.
+     "
     shared actual MatcherResult match(Object? actual,
         
         Matcher (Object? ) matcherResolver) {
@@ -211,9 +208,9 @@ shared class StringMatcher(
             matched = false;
             Description fd;
             if(exists actual){
-                fd = StringDescription("ERR: a String was expected, found ``className(actual)``: ", normalStyle);
+                fd = StringDescription("A String was expected, found ``className(actual)``: ", normalStyle);
             } else {
-                fd = StringDescription("ERR: non-null was expected: ", normalStyle);
+                fd = StringDescription("A String was expected, found null: ", normalStyle);
             }
             d = MatchDescription(fd, highlighted, expected, actual, descriptor);
         }    
@@ -266,7 +263,7 @@ by ("Jean-Pierre Ragey")
 shared class ListMatcher(
         "Expected elements"
         {Object? *} expected,
-        "Descriptor for elements decriptions " 
+        "Descriptor for elements descriptions " 
         Descriptor descriptor = DefaultDescriptor()
         ) satisfies Matcher 
 {
@@ -274,8 +271,8 @@ shared class ListMatcher(
     shared actual Description description(Matcher (Object? ) resolver) => ValueDescription(normalStyle, "ListMatcher");
     
     "Actual and expected list elements are matched one by one; matchers are found by `matcherResolver`.
-         It fails if `actual` is not an `Iterable`, if list lengths differ, or if any element match fails.
-         "
+     It fails if `actual` is not an `Iterable`, if list lengths differ, or if any element match fails.
+     "
     shared actual MatcherResult match(Object? actual,
         
         Matcher (Object? ) matcherResolver) {
@@ -372,9 +369,7 @@ by ("Jean-Pierre Ragey")
 shared class MapMatcher<Key, Item>(
         "Expected map"
         Map<Key, Item> expected,
-        //"Resolver for values matching" 
-        //MatcherResolver matcherResolver = DefaultMatcherResolver(),
-        "Descriptor for both keys and simple values." 
+        "descriptor" 
         Descriptor descriptor = DefaultDescriptor()
         
         ) satisfies Matcher 
@@ -385,7 +380,12 @@ shared class MapMatcher<Key, Item>(
     "\"MapMatcher\""
     shared actual Description description(Matcher (Object? ) resolver) => ValueDescription(normalStyle, "MapMatcher");
     
-    shared actual MatcherResult match(Object? actual, Matcher (Object? )  matcherResolver) {
+    " Fails if
+     - actual is not a Map&lt;Key, Item&gt;
+     - key sets differ; comparison is done by Set&lt;Key&gt;.complement();
+     - a key is common (by Set&lt;Key&gt;.intersection()), and associated values don't match (the values matcher is found by the resolver).  
+     "
+    shared actual MatcherResult match(Object? actual, Matcher (Object? )  resolver) {
         MatcherResult result;
         
         if(is Map<Key, Item> actual) {
@@ -410,9 +410,9 @@ shared class MapMatcher<Key, Item>(
             for(key in commonKeys) {
                 Item? actualItem = actual.get(key);
                 Item? expectedItem = expected.get(key);
-                Matcher itemMatcher = matcherResolver(expectedItem);
+                Matcher itemMatcher = resolver(expectedItem);
                 
-                MatcherResult mr = itemMatcher.match(actualItem, matcherResolver);
+                MatcherResult mr = itemMatcher.match(actualItem, resolver);
                 
                 Boolean matched = mr.succeeded;
                 variable Description? prefix = null;
@@ -420,7 +420,7 @@ shared class MapMatcher<Key, Item>(
                 if(!matched) {
                     prefix = CatDescription{
                         StringDescription("Value mismatch for "),
-                        itemMatcher.description(matcherResolver),
+                        itemMatcher.description(resolver),
                         StringDescription(": ", normalStyle)
                     };   
                 }
@@ -550,12 +550,16 @@ shared abstract class MissingAdapterStrategy<T>() given T satisfies Object {
     }
 }
 
-"[[MissingAdapterStrategy]] that fails if any field adapter is missing: field adapters are mandatory for ALL fields.
+"[[MissingAdapterStrategy]] that fails if any field adapter is missing: field adapters are mandatory for ALL fields,
+ FailForMissingAdapter doesn't create any field adapter at all.
  
  Note that it works only for shared top-level classes and non-shared nested classes (due to current Ceylon metaprogramming limitations). 
  "
 see ("ObjectMatcher") 
 shared class FailForMissingAdapter<T>() extends MissingAdapterStrategy<T>() given T satisfies Object {
+    
+    "Check if all `expected` fields have an adapter in `fieldAdapters` with the same name.
+     If not, returns an error Description."
     shared actual Description | {FieldAdapter<T> *} createMissingAdapters(T expected, {FieldAdapter<T> *} fieldAdapters, Matcher (Object? ) matcherResolver) {
         HashSet<String> adaptersFieldNames = HashSet<String>(fieldAdapters.map((FieldAdapter<T> fa) => fa.fieldName));
 
@@ -713,14 +717,17 @@ shared class ObjectMatcher<T> (
         return cn.split(":", true, true).last else cn;
     }
     
-    
+    "Matching fails if:
+     - the missing adapter strategy fails while adding missing field adapters;
+     - `actual` is not a `T`;
+     - or any field matching fails.  
+     "
     shared actual MatcherResult match(Object? actual, Matcher (Object? ) matcherResolver) {
         
         Description | Iterable<FieldAdapter<T>> currentFieldAdapters = missingAdapterStrategy.appendMissingAdapters(expected, fieldAdapters, matcherResolver);
         if(is Description currentFieldAdapters) {
             return MatcherResult(false, currentFieldAdapters);
         }
- //       doc("currentFieldAdapters: {FieldAdapter<T> *} expected, found ``currentFieldAdapters then className(currentFieldAdapters) else ""``" +className(currentFieldAdapters))
         assert(is Iterable<FieldAdapter<T>> currentFieldAdapters);
         
         if(is T actual) {
@@ -854,6 +861,7 @@ shared class NotMatcher (
     "NotMatcher short description: \"Not\""
     shared actual Description description(Matcher (Object? ) resolver) => StringDescription("Not", normalStyle); 
     
+    "Matches when child fails, and vice-versa."
     shared actual MatcherResult match(Object? actual, Matcher (Object? ) matcherResolver) {
    
         MatcherResult mr = matcher.match(actual, matcherResolver);
@@ -868,7 +876,7 @@ shared class NotMatcher (
             prefix = StringDescription("NotMatcher: child matcher succeeded");
         }
         
-        CompoundDescription descr = CompoundDescription (prefix, [childDescr]/*, [], [], descriptor*/);
+        CompoundDescription descr = CompoundDescription (prefix, [childDescr]);
         MatcherResult result = MatcherResult(succeeded, descr);
         return result;
     }
@@ -907,7 +915,7 @@ shared class DescribedAsMatcher (
     shared actual Description description(Matcher (Object? ) resolver) => StringDescription("DescribedAs", normalStyle); 
     
     "Let the child matcher match `actual`; the result description is the concatenation
-         of the prefix and the child match result description."
+     of the prefix and the child match result description."
     shared actual MatcherResult match(Object? actual, Matcher (Object? ) matcherResolver) {
    
         MatcherResult mr = matcher.match(actual, matcherResolver);
@@ -922,6 +930,7 @@ shared class DescribedAsMatcher (
      void typeMatcherExample() {
         assertThat(\"Hello\", TypeMatcher<String>());
      }
+ 
  NOTE: The error message doesn't print T type, since ceylon current version (0.5) has no way of finding T name.
  It may change when metaprogramming is supported. 
  "
@@ -934,6 +943,7 @@ shared class TypeMatcher<T> (
     "\"TypeMatcher\""
     shared actual Description description(Matcher (Object? ) resolver) => StringDescription("TypeMatcher", normalStyle); 
     
+    "Succeeds if `is T actual` is true."
     shared actual MatcherResult match(Object? actual, Matcher (Object? ) matcherResolver) {
 
         MatcherResult result;
@@ -965,11 +975,11 @@ shared class NotNullMatcher (
         ) extends TypeMatcher<Object> (descriptor) {} 
 
 
-"Matcher that delegates matching to an `expected` type dependent matcher, found by `resolver`.
+"Matcher that delegates matching to an `expected` type dependent matcher; when [[match]] is called, this matcher is found by its `resolver`.
      "
 by ("Jean-Pierre Ragey")
 shared class Is(
-        "Expected value"
+        "Expected value."
         Object? expected
         ) satisfies Matcher {
     

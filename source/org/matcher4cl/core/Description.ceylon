@@ -93,16 +93,19 @@ shared class ValueDescription(
 "Description consisting in a simple String."
 by ("Jean-Pierre Ragey")
 shared class StringDescription(
+    "String value"
     String val,
+    ""
     TextStyle textStyle = normalStyle 
 ) satisfies Description {
-
+    "Always 0."
     shared actual Integer level = 0;
     
+    "Append the value to stringBuilder"
     shared actual void appendTo(StringBuilder stringBuilder, DescrWriter descrWriter, Integer depth, DescriptorEnv descriptorEnv) {
         descrWriter.writeText(stringBuilder, textStyle, val);
     } 
-    
+    "Return the value ([val])"
     shared actual String string => val;
 }
 

@@ -435,11 +435,11 @@ void stringMatcherTest() {
         dToS(StringMatcher("ab").match("a").matchDescription));
 
     assertTrue(StringMatcher("ab").match(null).failed);
-    assertEquals("ERR: non-null was expected: \"ab\"/<<<<null>>>>", 
+    assertEquals("A String was expected, found null: \"ab\"/<<<<null>>>>", 
         dToS(StringMatcher("ab").match(null).matchDescription));
 
     assertTrue(StringMatcher("ab").match(42).failed);
-    assertEquals("ERR: a String was expected, found ceylon.language::Integer: \"ab\"/<<<42>>>", 
+    assertEquals("A String was expected, found ceylon.language::Integer: \"ab\"/<<<42>>>", 
         dToS(StringMatcher("ab").match(42).matchDescription));
 
     
