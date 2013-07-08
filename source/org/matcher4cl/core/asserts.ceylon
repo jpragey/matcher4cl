@@ -7,9 +7,7 @@ by ("Jean-Pierre Ragey")
 shared interface ResultHandler {
     shared formal void failed(
         "Result of failed match."
-        MatcherResult matcherResult,
-        "User message, will be typically added to final message. Ignored if null."
-        String? userMsg = null);
+        MatcherResult matcherResult);
 }
 
 "Exception resulting from a mismatch. It is typically thrown by [[ThrowingResultHandler]]."
@@ -48,13 +46,9 @@ shared class ThrowingResultHandler(
     
     "Throws a [[MatchException]] if `matcherResult` shows a mismatch.
      If constructor `printMultilineDescr` is true, print a multiline description, using `printer`."
-    shared actual void failed(MatcherResult matcherResult, String? userMsg) {
+    shared actual void failed(MatcherResult matcherResult) {
 
         StringBuilder prefixSb = StringBuilder();
-        if(exists userMsg) {
-            prefixSb.append(userMsg);
-            prefixSb.append(": ");
-        }
         String prefix = prefixSb.string;
         
         // -- Create short message
@@ -112,10 +106,6 @@ shared void assertThat(
     "Resolver for values matching" 
     Matcher (Object? ) resolver = defaultResolver(),
     
-    "A short message that may be included in the result, if matching failed. 
-     It typically describes the object to assert."
-    String? userMsg = null,
-
     "The [[ResultHandler]] to use if matching failed." 
     ResultHandler resultHandler = ThrowingResultHandler()
     ) 
@@ -124,7 +114,7 @@ shared void assertThat(
     MatcherResult matcherResult = matcher.match(actual, resolver); 
 
     if(matcherResult.failed) {
-        resultHandler.failed(matcherResult, userMsg);
+        resultHandler.failed(matcherResult);
     }
 }
 

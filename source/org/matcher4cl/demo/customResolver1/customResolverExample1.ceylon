@@ -34,8 +34,8 @@ void test() {
     //    ListMatcher( {User("Ted", {Phone("00000"), Phone("00001")})}, customDescriptor), resolver);
     
     // Simplified by customizing assertThat()
-    void myAssertThat(Object? actual, Matcher matcher, String? userMsg = null) =>
-        assertThat(actual, matcher, resolver, userMsg); 
+    void myAssertThat(Object? actual, Matcher matcher) =>
+        assertThat(actual, matcher, resolver); 
 
     //myAssertThat( {User("Ted", {Phone("00000")})}, 
     //    Is(       {User("Ted", {Phone("00000"), Phone("00001")})}));

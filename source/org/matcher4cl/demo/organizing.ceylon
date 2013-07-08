@@ -33,8 +33,8 @@ object testTools {
     
 }    
  
-shared void assertThat(Object? actual, Matcher matcher, String? userMessage= null)
-   => defaultAssertThat(actual, matcher, testTools.resolver, userMessage); 
+shared void assertThat(Object? actual, Matcher matcher)
+   => defaultAssertThat(actual, matcher, testTools.resolver); 
     
 void test() {
     assertThat(MyClass("a") /*actual*/, Is(MyClass("a")) /*expected*/);

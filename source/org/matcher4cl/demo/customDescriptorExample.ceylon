@@ -27,8 +27,8 @@ void customDescriptorTest() {
     );
     
     value resolver = (Object? expected) => defaultResolver(null, descriptor)(expected);
-    void myAssertThat(Object? actual, Matcher matcher, String? userMsg = null) =>
-        assertThat(actual, matcher, resolver, userMsg); 
+    void myAssertThat(Object? actual, Matcher matcher) =>
+        assertThat(actual, matcher, resolver); 
 
     myAssertThat(Complex(1.0, 0.1), Is(Complex(1.0, 0.0)));
     

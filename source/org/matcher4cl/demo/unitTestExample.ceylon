@@ -6,10 +6,6 @@ void doTest() {
     assertThat ("The actual value", Is("The expected one"));
 }
 
-void doTestWithUserMsg() {
-    assertThat {"Hello"; Is("World"); userMsg = "Some test";};
-}
-
 // -- Custom object test case
 shared class Country(shared String name, shared String capital) {}
 
