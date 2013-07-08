@@ -502,26 +502,41 @@ shared class FieldAdapter<T>(
 }
 
 
-"Behaviour of [[ObjectMatcher]] when its field adapter list doesn't cover all expected object list.
+"Behaviour of [[ObjectMatcher]] when its field adapter list doesn't cover all expected object fields.
  Concrete implementations may return an error, or create suitable adapters (possibly none).
+ 
+ In refinments, you typically only override [[createMissingAdapters]].
  "
 shared abstract class MissingAdapterStrategy<T>() given T satisfies Object {
-    "We can't create missing FieldAdapters directly because they require a resolver, available at latching time only;
-     so we create builders for them."
-    shared alias AdapterBuilder => FieldAdapter<T> (Matcher /*resolver*/(Object? ) );
 
-    ""
-    shared formal Description | {AdapterBuilder *} createAdapterBuilders(T expected, {FieldAdapter<T> *} fieldAdapters);
+    "Create [[FieldAdapter]]s for `expected` object fields that don't have one in `fieldAdapters`.
+     Override it in MissingAdapterStrategy refinments.
+     If OK, returns the created adapters; otherwise returns a [[Description]] of what went wrong (this error description will be considered as a match failure,
+     thus will be included in the output messages).
+     "
+    shared formal Description | {FieldAdapter<T> *} createMissingAdapters(
+        "The expected object"
+        T expected, 
+        "Current (custom) field adapters. You don't need to create an adapter for a field if there's an adapter for this field in this list."
+        {FieldAdapter<T> *} fieldAdapters, 
+        "Resolver"
+        Matcher (Object? ) resolver);
 
-    ""
-    shared default Description | Iterable<FieldAdapter<T>> appendMissingAdapters(T expected, {FieldAdapter<T> *} fieldAdapters, Matcher (Object? ) matcherResolver) {
-        Description | {AdapterBuilder *} adapterBuilders =  createAdapterBuilders(expected, fieldAdapters);
-        if(is Description adapterBuilders) {
-            return adapterBuilders;
+    "Append [[FieldAdapter]]s to `fieldAdapters` for `expected` object fields that don't have one in `fieldAdapters`.
+     "
+    shared default Description | Iterable<FieldAdapter<T>> appendMissingAdapters(
+        "The expected object"
+        T expected, 
+        "Current (custom) field adapters. You don't need to append an new adapter for a field if there's an adapter for this field in this list."
+        {FieldAdapter<T> *} fieldAdapters, 
+        "Resolver"
+        Matcher (Object? ) resolver) 
+    {
+        Description | {FieldAdapter<T> *} missingAdapters =  createMissingAdapters(expected, fieldAdapters, resolver);
+        if(is Description missingAdapters) {
+            return missingAdapters;
         }
-        assert(is {AdapterBuilder *} adapterBuilders);
-        
-        {FieldAdapter<T> *} missingAdapters = adapterBuilders.map((FieldAdapter<T>(Matcher(Object?)) elem) => elem(matcherResolver)); 
+        assert(is {FieldAdapter<T> *} missingAdapters);
         
         // NOTE :  the following lines could be replaced by :
         //        {FieldAdapter<T> *} currentFieldAdapters = fieldAdapters.chain(missingAdapters);
@@ -541,7 +556,7 @@ shared abstract class MissingAdapterStrategy<T>() given T satisfies Object {
  "
 see ("ObjectMatcher") 
 shared class FailForMissingAdapter<T>() extends MissingAdapterStrategy<T>() given T satisfies Object {
-    shared actual Description | {AdapterBuilder *} createAdapterBuilders(T expected, {FieldAdapter<T> *} fieldAdapters) {
+    shared actual Description | {FieldAdapter<T> *} createMissingAdapters(T expected, {FieldAdapter<T> *} fieldAdapters, Matcher (Object? ) matcherResolver) {
         HashSet<String> adaptersFieldNames = HashSet<String>(fieldAdapters.map((FieldAdapter<T> fa) => fa.fieldName));
 
         value t = type(expected);
@@ -571,7 +586,7 @@ shared class FailForMissingAdapter<T>() extends MissingAdapterStrategy<T>() give
  "
 see ("ObjectMatcher") 
 shared class IgnoreMissingAdapters<T>() extends MissingAdapterStrategy<T>() given T satisfies Object {
-    shared actual Description | {AdapterBuilder *} createAdapterBuilders(T expected, {FieldAdapter<T> *} fieldAdapters) {
+    shared actual Description | {FieldAdapter<T> *} createMissingAdapters(T expected, {FieldAdapter<T> *} fieldAdapters, Matcher (Object? ) matcherResolver) {
         return {};
     }    
 }
@@ -583,7 +598,7 @@ shared class IgnoreMissingAdapters<T>() extends MissingAdapterStrategy<T>() give
 see ("ObjectMatcher") 
 shared class CreateMissingAdapters<T>() extends MissingAdapterStrategy<T>() given T satisfies Object {
     
-    shared actual Description | {AdapterBuilder *} createAdapterBuilders(T expected, {FieldAdapter<T> *} fieldAdapters) {
+    shared actual Description | {FieldAdapter<T> *} createMissingAdapters(T expected, {FieldAdapter<T> *} fieldAdapters, Matcher (Object? ) matcherResolver) {
         
         // Get a ClassDeclaration for expected object.
         value t = type(expected);
@@ -611,7 +626,7 @@ shared class CreateMissingAdapters<T>() extends MissingAdapterStrategy<T>() give
             errBuilder.append(StringDescription(msg));
         }
         
-        SequenceBuilder<AdapterBuilder> missingAdaptersBuilder = SequenceBuilder<AdapterBuilder>();
+        SequenceBuilder<FieldAdapter<T>> missingAdaptersBuilder = SequenceBuilder<FieldAdapter<T>>();
 
         Set<String> definedButNotChecked = objectFieldNames.complement(adaptersFieldNames);
         if(!definedButNotChecked.empty) {
@@ -635,7 +650,8 @@ shared class CreateMissingAdapters<T>() extends MissingAdapterStrategy<T>() give
                     ]);
                     
                 }
-                AdapterBuilder ab = (Matcher (Object? ) resolver)  => FieldAdapter<T>(fieldName,resolver(expectedField),  extractor);
+                //AdapterBuilder ab = (Matcher (Object? ) resolver)  => FieldAdapter<T>(fieldName,resolver(expectedField),  extractor);
+                FieldAdapter<T> ab = FieldAdapter<T>(fieldName, matcherResolver(expectedField),  extractor);
                 missingAdaptersBuilder.append(ab);
             }
         }
