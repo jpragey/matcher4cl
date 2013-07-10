@@ -8,6 +8,11 @@
     <property name="ceylon.ant.lib" value="${ceylon.home}/lib/ceylon-ant.jar"/>
     <property name="source.encoding" value="UTF-8"/>
 
+    <property name="out.repo" location="modules"/>
+
+        <!-- Local repository -->
+    <property name="ceylon.repo.dir" location="${user.home}/.ceylon/repo" />
+
     <target name="ceylon-ant-taskdefs">
         <path id="ant-tasks">
             <pathelement location="${ceylon.ant.lib}"/>
@@ -46,6 +51,16 @@
 	
     <target name="clean">
         <delete dir="modules"/>
+    </target>
+
+    <target name="publish" depends="compile"
+            description="Copies the module to the user's repository">
+        <copy todir="${ceylon.repo.dir}" overwrite="true">
+            <fileset dir="${out.repo}">
+                <include name="org/matcher4cl/core/**"/>
+    
+            </fileset>
+        </copy>
     </target>
 
 </project>
