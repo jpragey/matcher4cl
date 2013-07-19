@@ -23,33 +23,33 @@
     <target name="default" depends="doc, compile">
     </target>
 
-    <target name="compile" depends="ceylon-ant-taskdefs">
+    <target name="compile" depends="ceylon-ant-taskdefs" description="">
         <ceylon-compile encoding="${source.encoding}">
             <module name="org.matcher4cl.core"/>
         </ceylon-compile>
     </target>
 
-    <target name="compile-js" depends="ceylon-ant-taskdefs">
+    <target name="compile-js" depends="ceylon-ant-taskdefs" description="">
         <ceylon-compile-js encoding="${source.encoding}">
             <module name="org.matcher4cl.core"/>
         </ceylon-compile-js>
     </target>
 
-    <target name="doc" depends="ceylon-ant-taskdefs">
+    <target name="doc" depends="ceylon-ant-taskdefs" description="">
         <ceylon-doc encoding="${source.encoding}">
             <module name="org.matcher4cl.core"/>
         </ceylon-doc>
     </target>
 
 
-    <target name="test" depends="compile">
+    <target name="test" depends="compile" description="">
         <ceylon-compile encoding="${source.encoding}" src="source">
             <module name="org.matcher4cl.test"/>
         </ceylon-compile>
         <ceylon-run module="org.matcher4cl.test/0.1.0"/>
     </target>
 	
-    <target name="clean">
+    <target name="clean" description="">
         <delete dir="modules"/>
     </target>
 

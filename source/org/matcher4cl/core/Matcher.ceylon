@@ -2,7 +2,7 @@ import java.lang { arrays, JString = String, JLong = Long, NoSuchFieldException,
 import ceylon.collection { HashSet }
 import java.util { JIterator = Iterator }
 import java.lang.reflect { InvocationTargetException }
-import ceylon.language.metamodel { type, Attribute }
+import ceylon.language.metamodel { type, Attribute, Value }
 import ceylon.language.metamodel.declaration { ClassDeclaration, AttributeDeclaration }
 
 
@@ -575,7 +575,7 @@ shared class FailForMissingAdapter<T>() extends MissingAdapterStrategy<T>() give
             ]);
         }
     
-        AttributeDeclaration[] attrs = classDeclaration.members<AttributeDeclaration>();
+        AttributeDeclaration[] attrs = classDeclaration.memberDeclarations<AttributeDeclaration>();
         Set<String> objectFieldNames = HashSet(attrs.map((AttributeDeclaration decl) => decl.name));
         
         Set<String> missingFieldNames = objectFieldNames.complement(adaptersFieldNames);
@@ -617,7 +617,7 @@ shared class CreateMissingAdapters<T>() extends MissingAdapterStrategy<T>() give
             ]);
         }
         
-        AttributeDeclaration[] attrs = classDeclaration.members<AttributeDeclaration>();
+        AttributeDeclaration[] attrs = classDeclaration.memberDeclarations<AttributeDeclaration>();
         Set<String> objectFieldNames = HashSet(attrs.map((AttributeDeclaration decl) => decl.name));
         
         HashSet<String> adaptersFieldNames = HashSet<String>(fieldAdapters.map((FieldAdapter<T> fa) => fa.fieldName));
@@ -637,10 +637,10 @@ shared class CreateMissingAdapters<T>() extends MissingAdapterStrategy<T>() give
             
             for(fieldName in definedButNotChecked) {
                 // 
-                AttributeDeclaration? attrDecl = classDeclaration.getMember<AttributeDeclaration>(fieldName);
+                AttributeDeclaration? attrDecl = classDeclaration.getMemberDeclaration<AttributeDeclaration>(fieldName);
                 assert (exists attrDecl);
                 Object? extractor(Object act)  {
-                    Attribute<Anything> attr = attrDecl.apply(act); 
+                    Value<Anything> attr = attrDecl.apply(act); 
                     return attr.get() else null;
                 }
                 Object? expectedField;
