@@ -1,5 +1,6 @@
-import ceylon.test { assertTrue, assertFalse, assertEquals, TestRunner, PrintingTestListener }
+import ceylon.test { assertTrue, assertFalse, assertEquals, TestRunner, PrintingTestListener, fail }
 import org.matcher4cl.core{ EqualsMatcher, ListMatcher, MapMatcher, ObjectMatcher, FieldAdapter, Is, AllMatcher, AnyMatcher, NotMatcher, TypeMatcher, DescribedAsMatcher, StringDescription, normalStyle, AnythingMatcher, NotNullMatcher, IdentifiableMatcher, EqualsOpMatcher, DefaultDescriptor, Descriptor, highlighted, StringMatcher, MissingAdapterStrategy, FailForMissingAdapter, IgnoreMissingAdapters, CreateMissingAdapters }
+import java.lang { ClassCastException }
 
 void equalsMatcherTest() {
     
@@ -33,7 +34,7 @@ void listMatcherTest() {
     assertEquals("<<<An iterator was expected, found null>>>", dToS(ListMatcher([10, 11, 12]).match(null).matchDescription));
 
     assertFalse(ListMatcher([10, 11, 12]).match(42).succeeded);
-    assertEquals("<<<An iterator was expected, found ceylon.language::Integer>>> value = 42", dToS(ListMatcher([10, 11, 12]).match(42).matchDescription)); // TODO: better expr
+    assertEquals("<<<An iterator was expected, found ceylon.language.Integer>>> value = 42", dToS(ListMatcher([10, 11, 12]).match(42).matchDescription)); // TODO: better expr
     //<<<An iterator was expected, found ceylon.language::Integer>>> != <<<An iterator was expected, found ceylon.language::Integer>>>42"
                                                                                                                                        
     assertFalse(ListMatcher([10, 11, 12]).match([10, 11]).succeeded);
@@ -71,7 +72,7 @@ void mapMatcherTest() {
     assertEquals("<<<A Map was expected, found null>>>", dToS(MapMatcher(LazyMap{10->100, 11->101, 12->102}).match(null).matchDescription));
     
     assertFalse(MapMatcher(LazyMap{10->100, 11->101, 12->102}).match(42).succeeded);
-    assertEquals("<<<A Map was expected, found ceylon.language::Integer>>>", dToS(MapMatcher(LazyMap{10->100, 11->101, 12->102}).match(42).matchDescription));
+    assertEquals("<<<A Map was expected, found ceylon.language.Integer>>>", dToS(MapMatcher(LazyMap{10->100, 11->101, 12->102}).match(42).matchDescription));
     
     // Matched
     assertTrue(MapMatcher(LazyMap{10->100, 11->101, 12->102}).match(LazyMap{10->100, 11->101, 12->102}).succeeded);
@@ -112,7 +113,7 @@ void objectMatcherTest() {
     assertTrue(objectMatcher.match(TestClass0("John", 20)).succeeded);
     
     assertFalse(objectMatcher.match(TestClass0("Ted", 30)).succeeded);
-    assertEquals("<<<TestClass0>>> {name: ('=='\"John\"/<<<\"Ted\">>>), age: ('=='20/<<<30>>>)}", 
+    assertEquals("<<<org.matcher4cl.test.TestClass0>>> {name: ('=='\"John\"/<<<\"Ted\">>>), age: ('=='20/<<<30>>>)}", 
         dToS(objectMatcher.match(TestClass0("Ted", 30)).matchDescription));
     
     // -- Wrong field list 
@@ -122,7 +123,7 @@ void objectMatcherTest() {
         FieldAdapter<TestClass0>("gotcha", AnythingMatcher(), (TestClass0 actual)=>null)
     });
     assertFalse(tooManyAdaptersObjectMatcher.match(TestClass0("Ted", 30)).succeeded);
-    assertEquals("ObjectMatcher<org.matcher4cl.test::TestClass0>: FieldAdapter list and class fields don't match.FieldAdapter(s) without class fields: gotcha", 
+    assertEquals("ObjectMatcher<org.matcher4cl.test.TestClass0>: FieldAdapter list and class fields don't match.FieldAdapter(s) without class fields: gotcha", 
         dToS(tooManyAdaptersObjectMatcher.match(TestClass0("Ted", 30)).matchDescription));
     
 }
@@ -132,9 +133,9 @@ shared class SharedTopLevel(shared String str0, shared String str, shared Intege
 class NonSharedTopLevel    (shared String str0, shared String str, shared Integer int) {}
 
 /*                      shared TopLevel         non-shared TopLevel     shared Nested         non-shared Nested
-FailForMissingAdapter         OK                      -                      -                      OK
+FailForMissingAdapter         OK                      OK                      -                      OK
 IgnoreMissingAdapters         OK                      OK                     OK                     OK
-CreateMissingAdapters         OK                      -                      -                      -
+CreateMissingAdapters         OK                      OK                      -                      -
 */
 
 shared class ObjectMatcherTester() {
@@ -156,16 +157,16 @@ shared class ObjectMatcherTester() {
         doTest(SharedTopLevel("a", "b", 42), matcher(SharedTopLevel("a", "b", 42), FailForMissingAdapter<SharedTopLevel>()), 
                 false, "Class field(s) without FieldAdapter: str, int");
         doTest(SharedTopLevel("a", "b", 42), matcher(SharedTopLevel("a", "b", 42), IgnoreMissingAdapters<SharedTopLevel>()), 
-                true, "SharedTopLevel {str0: (\"a\")}");
+                true, "org.matcher4cl.test.SharedTopLevel {str0: (\"a\")}");
         doTest(SharedTopLevel("a", "b", 42), matcher(SharedTopLevel("a", "b", 42), CreateMissingAdapters<SharedTopLevel>()), 
-                true, "SharedTopLevel {str0: (\"a\"), str: (\"b\"), int: (42)}");
+                true, "org.matcher4cl.test.SharedTopLevel {str0: (\"a\"), str: (\"b\"), int: (42)}");
         
         doTest(SharedTopLevel("a", "x", 42), matcher(SharedTopLevel("a", "b", 42), FailForMissingAdapter<SharedTopLevel>()), 
                 false, "Class field(s) without FieldAdapter: str, int");
         doTest(SharedTopLevel("a", "x", 42), matcher(SharedTopLevel("a", "b", 42), IgnoreMissingAdapters<SharedTopLevel>()), 
-                true, "SharedTopLevel {str0: (\"a\")}");
+                true, "org.matcher4cl.test.SharedTopLevel {str0: (\"a\")}");
         doTest(SharedTopLevel("a", "x", 42), matcher(SharedTopLevel("a", "b", 42), CreateMissingAdapters<SharedTopLevel>()), 
-                false, "<<<SharedTopLevel>>> {str0: (\"a\"), str: (\"b\"/<<<\"x\">>>: expected[0]='b'(98=#62) != actual[0]='x'(120=#78)), int: (42)}");
+                false, "<<<org.matcher4cl.test.SharedTopLevel>>> {str0: (\"a\"), str: (\"b\"/<<<\"x\">>>: expected[0]='b'(98=#62) != actual[0]='x'(120=#78)), int: (42)}");
 
     }
     
@@ -177,19 +178,18 @@ shared class ObjectMatcherTester() {
                 
         // NonSharedTopLevel
         doTest(NonSharedTopLevel("a", "b", 42), matcher(NonSharedTopLevel("a", "b", 42), FailForMissingAdapter<NonSharedTopLevel>()), 
-                false, "Problem getting a MH for constructor for: class org.matcher4cl.test.NonSharedTopLevelA RuntimeException occured while getting expected type declaration. Note that ObjectMatcher with FailForMissingAdapter strategy only supports top-level shared classes (Ceylon current limitation).In this case, consider using IgnoreMissingAdapters and defining adapters for all fields.");
+                false, "Class field(s) without FieldAdapter: str, int");
         doTest(NonSharedTopLevel("a", "b", 42), matcher(NonSharedTopLevel("a", "b", 42), IgnoreMissingAdapters<NonSharedTopLevel>()), 
-                true, "NonSharedTopLevel {str0: (\"a\")}");
+                true, "org.matcher4cl.test.NonSharedTopLevel {str0: (\"a\")}");
         doTest(NonSharedTopLevel("a", "b", 42), matcher(NonSharedTopLevel("a", "b", 42), CreateMissingAdapters<NonSharedTopLevel>()), 
-                false, "Problem getting a MH for constructor for: class org.matcher4cl.test.NonSharedTopLevelA RuntimeException occured while getting expected type declaration. Note that ObjectMatcher with CreateMissingAdapters strategy only supports top-level shared classes (Ceylon current limitation).In this case, consider using IgnoreMissingAdapters and defining adapters for all fields.");
+                true, "org.matcher4cl.test.NonSharedTopLevel {str0: (\"a\"), str: (\"b\"), int: (42)}");
         
         doTest(NonSharedTopLevel("a", "x", 42), matcher(NonSharedTopLevel("a", "b", 42), FailForMissingAdapter<NonSharedTopLevel>()), 
-                false, "Problem getting a MH for constructor for: class org.matcher4cl.test.NonSharedTopLevelA RuntimeException occured while getting expected type declaration. Note that ObjectMatcher with FailForMissingAdapter strategy only supports top-level shared classes (Ceylon current limitation).In this case, consider using IgnoreMissingAdapters and defining adapters for all fields.");
+                false, "Class field(s) without FieldAdapter: str, int");
         doTest(NonSharedTopLevel("a", "x", 42), matcher(NonSharedTopLevel("a", "b", 42), IgnoreMissingAdapters<NonSharedTopLevel>()), 
-                true, "NonSharedTopLevel {str0: (\"a\")}");
+                true, "org.matcher4cl.test.NonSharedTopLevel {str0: (\"a\")}");
         doTest(NonSharedTopLevel("a", "x", 42), matcher(NonSharedTopLevel("a", "b", 42), CreateMissingAdapters<NonSharedTopLevel>()), 
-                false, "Problem getting a MH for constructor for: class org.matcher4cl.test.NonSharedTopLevelA RuntimeException occured while getting expected type declaration. Note that ObjectMatcher with CreateMissingAdapters strategy only supports top-level shared classes (Ceylon current limitation).In this case, consider using IgnoreMissingAdapters and defining adapters for all fields.");
-
+                false, "<<<org.matcher4cl.test.NonSharedTopLevel>>> {str0: (\"a\"), str: (\"b\"/<<<\"x\">>>: expected[0]='b'(98=#62) != actual[0]='x'(120=#78)), int: (42)}");
     }
     
     shared void allSharedNestedLevelTests() {
@@ -198,20 +198,26 @@ shared class ObjectMatcherTester() {
                     FieldAdapter<SharedNested>("str0",   EqualsMatcher(expected.str0), (SharedNested actual)=>actual.str0)
                 }, DefaultDescriptor(), strategy);
                 
-        // SharedNested
-        doTest(SharedNested("a", "b", 42), matcher(SharedNested("a", "b", 42), FailForMissingAdapter<SharedNested>()), 
-                false, "cannot convert MethodHandle(ObjectMatcherTester,String,String,long)SharedNested to (String,String,long)ObjectA RuntimeException occured while getting expected type declaration. Note that ObjectMatcher with FailForMissingAdapter strategy only supports top-level shared classes (Ceylon current limitation).In this case, consider using IgnoreMissingAdapters and defining adapters for all fields.");
-        doTest(SharedNested("a", "b", 42), matcher(SharedNested("a", "b", 42), IgnoreMissingAdapters<SharedNested>()), 
-                true, "SharedNested {str0: (\"a\")}");
-        doTest(SharedTopLevel("a", "b", 42), matcher(SharedNested("a", "b", 42), CreateMissingAdapters<SharedNested>()), 
-                false, "cannot convert MethodHandle(ObjectMatcherTester,String,String,long)SharedNested to (String,String,long)ObjectA RuntimeException occured while getting expected type declaration. Note that ObjectMatcher with CreateMissingAdapters strategy only supports top-level shared classes (Ceylon current limitation).In this case, consider using IgnoreMissingAdapters and defining adapters for all fields.");
-        
-        doTest(SharedNested("a", "x", 42), matcher(SharedNested("a", "b", 42), FailForMissingAdapter<SharedNested>()), 
-                false, "cannot convert MethodHandle(ObjectMatcherTester,String,String,long)SharedNested to (String,String,long)ObjectA RuntimeException occured while getting expected type declaration. Note that ObjectMatcher with FailForMissingAdapter strategy only supports top-level shared classes (Ceylon current limitation).In this case, consider using IgnoreMissingAdapters and defining adapters for all fields.");
-        doTest(SharedNested("a", "x", 42), matcher(SharedNested("a", "b", 42), IgnoreMissingAdapters<SharedNested>()), 
-                true, "SharedNested {str0: (\"a\")}");
-        doTest(SharedNested("a", "x", 42), matcher(SharedNested("a", "b", 42), CreateMissingAdapters<SharedNested>()), 
-                false, "cannot convert MethodHandle(ObjectMatcherTester,String,String,long)SharedNested to (String,String,long)ObjectA RuntimeException occured while getting expected type declaration. Note that ObjectMatcher with CreateMissingAdapters strategy only supports top-level shared classes (Ceylon current limitation).In this case, consider using IgnoreMissingAdapters and defining adapters for all fields.");
+        // SharedNested (Not supported yet)
+        try {
+            doTest(SharedNested("a", "b", 42), matcher(SharedNested("a", "b", 42), FailForMissingAdapter<SharedNested>()), 
+                    false, "cannot convert MethodHandle(ObjectMatcherTester,String,String,long)SharedNested to (String,String,long)ObjectA RuntimeException occured while getting expected type declaration. Note that ObjectMatcher with FailForMissingAdapter strategy only supports top-level shared classes (Ceylon current limitation).In this case, consider using IgnoreMissingAdapters and defining adapters for all fields.");
+            doTest(SharedNested("a", "b", 42), matcher(SharedNested("a", "b", 42), IgnoreMissingAdapters<SharedNested>()), 
+                    true, "SharedNested {str0: (\"a\")}");
+            doTest(SharedTopLevel("a", "b", 42), matcher(SharedNested("a", "b", 42), CreateMissingAdapters<SharedNested>()), 
+                    false, "cannot convert MethodHandle(ObjectMatcherTester,String,String,long)SharedNested to (String,String,long)ObjectA RuntimeException occured while getting expected type declaration. Note that ObjectMatcher with CreateMissingAdapters strategy only supports top-level shared classes (Ceylon current limitation).In this case, consider using IgnoreMissingAdapters and defining adapters for all fields.");
+            
+            doTest(SharedNested("a", "x", 42), matcher(SharedNested("a", "b", 42), FailForMissingAdapter<SharedNested>()), 
+                    false, "cannot convert MethodHandle(ObjectMatcherTester,String,String,long)SharedNested to (String,String,long)ObjectA RuntimeException occured while getting expected type declaration. Note that ObjectMatcher with FailForMissingAdapter strategy only supports top-level shared classes (Ceylon current limitation).In this case, consider using IgnoreMissingAdapters and defining adapters for all fields.");
+            doTest(SharedNested("a", "x", 42), matcher(SharedNested("a", "b", 42), IgnoreMissingAdapters<SharedNested>()), 
+                    true, "SharedNested {str0: (\"a\")}");
+            doTest(SharedNested("a", "x", 42), matcher(SharedNested("a", "b", 42), CreateMissingAdapters<SharedNested>()), 
+                    false, "cannot convert MethodHandle(ObjectMatcherTester,String,String,long)SharedNested to (String,String,long)ObjectA RuntimeException occured while getting expected type declaration. Note that ObjectMatcher with CreateMissingAdapters strategy only supports top-level shared classes (Ceylon current limitation).In this case, consider using IgnoreMissingAdapters and defining adapters for all fields.");
+            
+            fail("ObjectMatcherTester: tests with SharedNested did not result in ClassCastException as expected. Maybe type() supports nested class now; consider updatint the tests.");
+            
+        } catch(ClassCastException expected) {
+        }
     }
     
     shared void allNonSharedNestedLevelTests() {
@@ -221,23 +227,58 @@ shared class ObjectMatcherTester() {
                 }, DefaultDescriptor(), strategy);
                 
         // NonSharedNested
-        doTest(NonSharedNested("a", "b", 42), matcher(NonSharedNested("a", "b", 42), FailForMissingAdapter<NonSharedNested>()), 
-                false, "Class field(s) without FieldAdapter: str, int");
-        doTest(NonSharedNested("a", "b", 42), matcher(NonSharedNested("a", "b", 42), IgnoreMissingAdapters<NonSharedNested>()), 
-                true, "NonSharedNested {str0: (\"a\")}");
-        doTest(NonSharedNested("a", "b", 42), matcher(NonSharedNested("a", "b", 42), CreateMissingAdapters<NonSharedNested>()), 
-                false, "Failed to find getter method getStr for: JavaBeanValue[str:String]A RuntimeException occured while getting field str of expected object of type NonSharedNested. Note that ObjectMatcher with CreateMissingAdapters strategy only supports top-level shared classes (Ceylon current limitation).In this case, consider using IgnoreMissingAdapters and defining adapters for all fields.");
-        
-        doTest(NonSharedNested("a", "x", 42), matcher(NonSharedNested("a", "b", 42), FailForMissingAdapter<NonSharedNested>()), 
-                false, "Class field(s) without FieldAdapter: str, int");
-        doTest(NonSharedNested("a", "x", 42), matcher(NonSharedNested("a", "b", 42), IgnoreMissingAdapters<NonSharedNested>()), 
-                true, "NonSharedNested {str0: (\"a\")}");
-        doTest(NonSharedNested("a", "x", 42), matcher(NonSharedNested("a", "b", 42), CreateMissingAdapters<NonSharedNested>()), 
-                false, "Failed to find getter method getStr for: JavaBeanValue[str:String]A RuntimeException occured while getting field str of expected object of type NonSharedNested. Note that ObjectMatcher with CreateMissingAdapters strategy only supports top-level shared classes (Ceylon current limitation).In this case, consider using IgnoreMissingAdapters and defining adapters for all fields.");
+        try {
+            doTest(NonSharedNested("a", "b", 42), matcher(NonSharedNested("a", "b", 42), FailForMissingAdapter<NonSharedNested>()), 
+                    false, "Class field(s) without FieldAdapter: str, int");
+            doTest(NonSharedNested("a", "b", 42), matcher(NonSharedNested("a", "b", 42), IgnoreMissingAdapters<NonSharedNested>()), 
+                    true, "NonSharedNested {str0: (\"a\")}");
+            doTest(NonSharedNested("a", "b", 42), matcher(NonSharedNested("a", "b", 42), CreateMissingAdapters<NonSharedNested>()), 
+                    false, "Failed to find getter method getStr for: JavaBeanValue[str:String]A RuntimeException occured while getting field str of expected object of type NonSharedNested. Note that ObjectMatcher with CreateMissingAdapters strategy only supports top-level shared classes (Ceylon current limitation).In this case, consider using IgnoreMissingAdapters and defining adapters for all fields.");
+            
+            doTest(NonSharedNested("a", "x", 42), matcher(NonSharedNested("a", "b", 42), FailForMissingAdapter<NonSharedNested>()), 
+                    false, "Class field(s) without FieldAdapter: str, int");
+            doTest(NonSharedNested("a", "x", 42), matcher(NonSharedNested("a", "b", 42), IgnoreMissingAdapters<NonSharedNested>()), 
+                    true, "NonSharedNested {str0: (\"a\")}");
+            doTest(NonSharedNested("a", "x", 42), matcher(NonSharedNested("a", "b", 42), CreateMissingAdapters<NonSharedNested>()), 
+                    false, "Failed to find getter method getStr for: JavaBeanValue[str:String]A RuntimeException occured while getting field str of expected object of type NonSharedNested. Note that ObjectMatcher with CreateMissingAdapters strategy only supports top-level shared classes (Ceylon current limitation).In this case, consider using IgnoreMissingAdapters and defining adapters for all fields.");
+
+            fail("ObjectMatcherTester: tests with SharedNested did not result in ClassCastException as expected. Maybe type() supports nested class now; consider updatint the tests.");
+            
+        } catch(ClassCastException expected) {
+        }
     }
     
      
 }
+
+
+
+//
+//shared class ObjectMatcherTesterDummy() {
+//    shared class SharedNested(shared String str0, shared String str, shared Integer int) {}
+//  
+////    type(SharedNested("a", "b", 42));
+//  //ObjectMatcher<SharedNested> (SharedNested("a", "b", 42)/*expected*/, {
+//  //                  FieldAdapter<SharedNested>("str0",   EqualsMatcher(expected.str0), (SharedNested actual)=>actual.str0)
+//  //              }, DefaultDescriptor(), strategy)
+//  //  matcher(SharedNested("a", "b", 42), FailForMissingAdapter<SharedNested>());
+//    
+//    void doTest<T>(Object actual, ObjectMatcher<T> matcher, Boolean matchResult, String msg) given T satisfies Object {
+//        assertEquals(matchResult, matcher.match(actual).succeeded);
+//    }
+//    
+//    shared void allSharedNestedLevelTests() {
+//        ObjectMatcher<SharedNested> matcher(SharedNested expected, MissingAdapterStrategy<SharedNested> strategy)  
+//            => ObjectMatcher<SharedNested> (expected, {
+//                    FieldAdapter<SharedNested>("str0",   EqualsMatcher(expected.str0), (SharedNested actual)=>actual.str0)
+//                }, DefaultDescriptor(), strategy);
+//                
+//        // SharedNested
+//        doTest(SharedNested("a", "b", 42), matcher(SharedNested("a", "b", 42), FailForMissingAdapter<SharedNested>()), 
+//                false, "cannot convert MethodHandle(ObjectMatcherTester,String,String,long)SharedNested to (String,String,long)ObjectA RuntimeException occured while getting expected type declaration. Note that ObjectMatcher with FailForMissingAdapter strategy only supports top-level shared classes (Ceylon current limitation).In this case, consider using IgnoreMissingAdapters and defining adapters for all fields.");
+//    }
+//    allSharedNestedLevelTests();
+//}
 
 shared void objectMatcherWithMissingAdaptersTest() {
     ObjectMatcherTester().allSharedTopLevelTests();
@@ -326,7 +367,7 @@ void typeMatcherTest() {
         dToS(TypeMatcher<String>().match("Hello").matchDescription));
     
     assertFalse(TypeMatcher<Integer>().match("Hello").succeeded);
-    assertEquals("ERR: wrong type: found ceylon.language::String: <<<\"Hello\">>>", 
+    assertEquals("ERR: wrong type: found ceylon.language.String: <<<\"Hello\">>>", 
         dToS(TypeMatcher<Integer>().match("Hello").matchDescription));
     
     assertFalse(TypeMatcher<Integer>().match(null).succeeded);
@@ -339,12 +380,12 @@ void typeMatcherTest() {
         dToS(TypeMatcher<Sequence<Integer>>().match({1,2,3}).matchDescription));
     
     assertFalse(TypeMatcher<Sequence<Integer>>().match("Hello").succeeded);
-    assertEquals("ERR: wrong type: found ceylon.language::String: <<<\"Hello\">>>", 
+    assertEquals("ERR: wrong type: found ceylon.language.String: <<<\"Hello\">>>", 
         dToS(TypeMatcher<Sequence<Integer>>().match("Hello").matchDescription));
 
         
     assertFalse(TypeMatcher<A<Integer>>().match(A<String>()).succeeded);
-    assertEquals("ERR: wrong type: found org.matcher4cl.test::A: <<<A>>>", 
+    assertEquals("ERR: wrong type: found org.matcher4cl.test.A: <<<A>>>", 
         dToS(TypeMatcher<A<Integer>>().match(A<String>()).matchDescription));
     
     assertTrue(TypeMatcher<A<Integer>>().match(A<Integer>()).succeeded);
@@ -381,7 +422,7 @@ void sameInstanceMatcherTest() {
         dToS(IdentifiableMatcher(a0).match(a1).matchDescription));
     
     assertFalse(IdentifiableMatcher(a0).match(12).succeeded);
-    assertEquals("ERR: org.matcher4cl.test::A was expected, found ceylon.language::Integer: A/<<<12>>>", 
+    assertEquals("ERR: org.matcher4cl.test.A was expected, found ceylon.language.Integer: A/<<<12>>>", 
         dToS(IdentifiableMatcher(a0).match(12).matchDescription));
     
     assertFalse(IdentifiableMatcher(a0).match(null).succeeded);
@@ -439,7 +480,7 @@ void stringMatcherTest() {
         dToS(StringMatcher("ab").match(null).matchDescription));
 
     assertTrue(StringMatcher("ab").match(42).failed);
-    assertEquals("A String was expected, found ceylon.language::Integer: \"ab\"/<<<42>>>", 
+    assertEquals("A String was expected, found ceylon.language.Integer: \"ab\"/<<<42>>>", 
         dToS(StringMatcher("ab").match(42).matchDescription));
 
     
@@ -481,21 +522,21 @@ void matcherTestSuite() {
     TestRunner testRunner = TestRunner();
     testRunner.addTestListener(PrintingTestListener());
 
-    testRunner.addTest("org.jpr.matchers.core::equalsMatcherTest", equalsMatcherTest);
-    testRunner.addTest("org.jpr.matchers.core::listMatcherTest", listMatcherTest); 
-    testRunner.addTest("org.jpr.matchers.core::mapMatcherTest", mapMatcherTest);
-    testRunner.addTest("org.jpr.matchers.core::objectMatcherTest", objectMatcherTest);
-    testRunner.addTest("org.jpr.matchers.core::objectMatcherWithMissingAdaptersTest", objectMatcherWithMissingAdaptersTest);
-    testRunner.addTest("org.jpr.matchers.core::allMatcherTest", allMatcherTest);
-    testRunner.addTest("org.jpr.matchers.core::anyMatcherTest", anyMatcherTest);
-    testRunner.addTest("org.jpr.matchers.core::notMatcherTest", notMatcherTest);
-    testRunner.addTest("org.jpr.matchers.core::anythingMatcherTest", anythingMatcherTest);
-    testRunner.addTest("org.jpr.matchers.core::describedAsMatcherTest", describedAsMatcherTest);
-    testRunner.addTest("org.jpr.matchers.core::typeMatcherTest", typeMatcherTest);
-    testRunner.addTest("org.jpr.matchers.core::sameInstanceMatcherTest", sameInstanceMatcherTest);
-    testRunner.addTest("org.jpr.matchers.core::notNullMatcherTest", notNullMatcherTest);
-    testRunner.addTest("org.jpr.matchers.core::simpleValuesMatcherTest", simpleValuesMatcherTest);
-    testRunner.addTest("org.jpr.matchers.core::stringMatcherTest", stringMatcherTest);
+    testRunner.addTest("org.jpr.matchers.core.equalsMatcherTest", equalsMatcherTest);
+    testRunner.addTest("org.jpr.matchers.core.listMatcherTest", listMatcherTest); 
+    testRunner.addTest("org.jpr.matchers.core.mapMatcherTest", mapMatcherTest);
+    testRunner.addTest("org.jpr.matchers.core.objectMatcherTest", objectMatcherTest);
+    testRunner.addTest("org.jpr.matchers.core.objectMatcherWithMissingAdaptersTest", objectMatcherWithMissingAdaptersTest);
+    testRunner.addTest("org.jpr.matchers.core.allMatcherTest", allMatcherTest);
+    testRunner.addTest("org.jpr.matchers.core.anyMatcherTest", anyMatcherTest);
+    testRunner.addTest("org.jpr.matchers.core.notMatcherTest", notMatcherTest);
+    testRunner.addTest("org.jpr.matchers.core.anythingMatcherTest", anythingMatcherTest);
+    testRunner.addTest("org.jpr.matchers.core.describedAsMatcherTest", describedAsMatcherTest);
+    testRunner.addTest("org.jpr.matchers.core.typeMatcherTest", typeMatcherTest);
+    testRunner.addTest("org.jpr.matchers.core.sameInstanceMatcherTest", sameInstanceMatcherTest);
+    testRunner.addTest("org.jpr.matchers.core.notNullMatcherTest", notNullMatcherTest);
+    testRunner.addTest("org.jpr.matchers.core.simpleValuesMatcherTest", simpleValuesMatcherTest);
+    testRunner.addTest("org.jpr.matchers.core.stringMatcherTest", stringMatcherTest);
     
     testRunner.run();
     

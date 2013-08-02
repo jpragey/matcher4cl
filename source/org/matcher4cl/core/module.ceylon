@@ -230,7 +230,7 @@
      - [[IgnoreMissingAdapters]]: doesn't care about missing FieldAdapter(s);
      - [[CreateMissingAdapters]] (default).
      
-     Currently [[CreateMissingAdapters]] works only for shared top-level classes; for other classes, use [[IgnoreMissingAdapters]] 
+     Currently [[CreateMissingAdapters]] works only for top-level classes (shared and non-shared); for other classes, use [[IgnoreMissingAdapters]] 
      (and check the field adapter list is synced with the class). So for a local class:
      
          void customClassTest() {
@@ -651,7 +651,7 @@
      
 by ("Jean-Pierre Ragey")
 license ("Apache Software License V2.0") 
-module org.matcher4cl.core '0.1.0' {
+shared module org.matcher4cl.core '0.1.0' {
     import ceylon.test '0.6';
     import ceylon.collection '0.6';
     import java.base '7';

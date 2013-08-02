@@ -26,7 +26,7 @@ shared class DefaultDescriptorEnv() satisfies DescriptorEnv {
 }
 
 "Convert a simple object to a String, used for description to string conversion."
-see ("`ValueDescription`")
+see (`ValueDescription`)
 by ("Jean-Pierre Ragey")
 shared interface Descriptor {
     "Return a (short) decsription of `obj`. "

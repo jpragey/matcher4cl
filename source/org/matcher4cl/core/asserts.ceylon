@@ -2,7 +2,7 @@
 "Handler for a match failure.
  Typically used by assertions (eg [[assertThat]]) to print a mismatch message in some way (text in console, HTML file, etc). 
  "
-see ("assertThat")
+see (`assertThat`)
 by ("Jean-Pierre Ragey")
 shared interface ResultHandler {
     shared formal void failed(

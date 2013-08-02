@@ -6,12 +6,12 @@ shared abstract class TextStyle() of highlighted |normalStyle {
 }
 
 "Style of text for error highlighting"
-see ("TextStyle")
+see (`TextStyle`)
 by ("Jean-Pierre Ragey")
 shared object highlighted extends TextStyle() {}
 
 "Style of text for success"
-see ("TextStyle")
+see (`TextStyle`)
 by ("Jean-Pierre Ragey")
 shared object normalStyle extends TextStyle() {}
 
@@ -375,7 +375,7 @@ shared class ObjectFieldDescription(
  It is made of a prefix (describes the object itself) and a list 
  of [[ObjectFieldDescription]], which describe its fields.
  "
-see ("ObjectMatcher")     
+see (`ObjectMatcher`)     
 by ("Jean-Pierre Ragey")
 shared class ObjectDescription (
     "Prefix, prepended to object description"
@@ -389,7 +389,7 @@ shared class ObjectDescription (
 "Child description (to be used with [[CompoundDescription]]).
  It's simply a wrapper on another [[Description]]; it adds a prefix to output string, 
  so that children descriptions can be differenciated."
-see ("CompoundDescription")
+see (`CompoundDescription`)
 by ("Jean-Pierre Ragey")
 shared class ChildDescription (
     "Prefix, typically child matcher name (for compound matchers like `AllMatcher`)"

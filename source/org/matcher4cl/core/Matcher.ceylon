@@ -2,8 +2,8 @@ import java.lang { arrays, JString = String, JLong = Long, NoSuchFieldException,
 import ceylon.collection { HashSet }
 import java.util { JIterator = Iterator }
 import java.lang.reflect { InvocationTargetException }
-import ceylon.language.metamodel { type, Attribute, Value }
-import ceylon.language.metamodel.declaration { ClassDeclaration, AttributeDeclaration }
+import ceylon.language.model { type, Attribute/*, Value*/, Type, Value }
+import ceylon.language.model.declaration { ClassDeclaration, ValueDeclaration }
 
 
 "Result of a [[Matcher]] match.
@@ -57,7 +57,7 @@ shared interface Matcher {
  
  If your class is somewhat complex (eg it has fields), [[ObjectMatcher]] may be more appropriate. 
  "
-see ("EqualsMatcher", "IdentifiableMatcher")
+see (`EqualsMatcher`, `IdentifiableMatcher`)
 by ("Jean-Pierre Ragey")
 shared abstract class EqualsOpMatcher<T>(
     "The expected value"
@@ -475,7 +475,7 @@ shared class MapMatcher<Key, Item>(
 "Adapter for a custom class T field, to by used with [[ObjectMatcher]].
  The field of actual value is returned by `field()`.
  "
-see ("ObjectMatcher")     
+see (`ObjectMatcher`)     
 by ("Jean-Pierre Ragey")
 shared class FieldAdapter<T>(
     "Class field name, for description"
@@ -555,7 +555,7 @@ shared abstract class MissingAdapterStrategy<T>() given T satisfies Object {
  
  Note that it works only for shared top-level classes and non-shared nested classes (due to current Ceylon metaprogramming limitations). 
  "
-see ("ObjectMatcher") 
+see (`ObjectMatcher`) 
 shared class FailForMissingAdapter<T>() extends MissingAdapterStrategy<T>() given T satisfies Object {
     
     "Check if all `expected` fields have an adapter in `fieldAdapters` with the same name.
@@ -570,13 +570,15 @@ shared class FailForMissingAdapter<T>() extends MissingAdapterStrategy<T>() give
         } catch (RuntimeException e) {
             return TreeDescription(StringDescription(e.message), [ 
                 StringDescription("A RuntimeException occured while getting expected type declaration. "),
-                StringDescription("Note that ObjectMatcher with FailForMissingAdapter strategy only supports top-level shared classes (Ceylon current limitation)."),
+                StringDescription("Note that ObjectMatcher with FailForMissingAdapter strategy only supports top-level classes (Ceylon current limitation)."),
                 StringDescription("In this case, consider using IgnoreMissingAdapters and defining adapters for all fields.")
             ]);
         }
     
-        AttributeDeclaration[] attrs = classDeclaration.memberDeclarations<AttributeDeclaration>();
-        Set<String> objectFieldNames = HashSet(attrs.map((AttributeDeclaration decl) => decl.name));
+//        AttributeDeclaration[] attrs = classDeclaration.memberDeclarations<AttributeDeclaration>();
+//        AttributeDeclaration[] attrs = classDeclaration.memberDeclarations<AttributeDeclaration>();
+        ValueDeclaration[] attrs = classDeclaration.memberDeclarations<ValueDeclaration>();
+        Set<String> objectFieldNames = HashSet(attrs.map((ValueDeclaration decl) => decl.name));
         
         Set<String> missingFieldNames = objectFieldNames.complement(adaptersFieldNames);
         if(!missingFieldNames.empty) {
@@ -588,7 +590,7 @@ shared class FailForMissingAdapter<T>() extends MissingAdapterStrategy<T>() give
 }
 "[[MissingAdapterStrategy]] that doesn't care about missing field adapters: field adapters are always optional.
  "
-see ("ObjectMatcher") 
+see (`ObjectMatcher`) 
 shared class IgnoreMissingAdapters<T>() extends MissingAdapterStrategy<T>() given T satisfies Object {
     shared actual Description | {FieldAdapter<T> *} createMissingAdapters(T expected, {FieldAdapter<T> *} fieldAdapters, Matcher (Object? ) matcherResolver) {
         return {};
@@ -599,7 +601,7 @@ shared class IgnoreMissingAdapters<T>() extends MissingAdapterStrategy<T>() give
  
  Note that it works only for shared top-level classes (due to current Ceylon metaprogramming limitations). 
  "
-see ("ObjectMatcher") 
+see (`ObjectMatcher`) 
 shared class CreateMissingAdapters<T>() extends MissingAdapterStrategy<T>() given T satisfies Object {
     
     shared actual Description | {FieldAdapter<T> *} createMissingAdapters(T expected, {FieldAdapter<T> *} fieldAdapters, Matcher (Object? ) matcherResolver) {
@@ -617,8 +619,8 @@ shared class CreateMissingAdapters<T>() extends MissingAdapterStrategy<T>() give
             ]);
         }
         
-        AttributeDeclaration[] attrs = classDeclaration.memberDeclarations<AttributeDeclaration>();
-        Set<String> objectFieldNames = HashSet(attrs.map((AttributeDeclaration decl) => decl.name));
+        ValueDeclaration[] attrs = classDeclaration.memberDeclarations<ValueDeclaration>();
+        Set<String> objectFieldNames = HashSet(attrs.map((ValueDeclaration decl) => decl.name));
         
         HashSet<String> adaptersFieldNames = HashSet<String>(fieldAdapters.map((FieldAdapter<T> fa) => fa.fieldName));
         
@@ -637,7 +639,7 @@ shared class CreateMissingAdapters<T>() extends MissingAdapterStrategy<T>() give
             
             for(fieldName in definedButNotChecked) {
                 // 
-                AttributeDeclaration? attrDecl = classDeclaration.getMemberDeclaration<AttributeDeclaration>(fieldName);
+                ValueDeclaration? attrDecl = classDeclaration.getMemberDeclaration<ValueDeclaration>(fieldName);
                 assert (exists attrDecl);
                 Object? extractor(Object act)  {
                     Value<Anything> attr = attrDecl.apply(act); 
@@ -681,16 +683,16 @@ shared class CreateMissingAdapters<T>() extends MissingAdapterStrategy<T>() give
  - [[FailForMissingAdapter]] (fails if any field has no adapter) and [[IgnoreMissingAdapters]] (doesn't care about missing adapters) 
    can also be used. 
  
- NOTE: due to limitations in current Ceylon metaprogramming feature, non-shared or nested classes may lead to RuntimeExceptions 
+ NOTE: due to limitations in current Ceylon metaprogramming feature, nested classes may lead to RuntimeExceptions 
  in Ceylon runtime. In this case, you could typically use [[IgnoreMissingAdapters]] (but you loose fields checking - beware to update 
  field adapters when you add or remove a field to a custom class)
  Currently working combinations are (roughly):
  
  <table class = \"table table-bordered\">
    <tr><td>                      </td><td> shared TopLevel </td><td> non-shared TopLevel </td><td> shared Nested </td><td> non-shared Nested </td></tr>
-   <tr><td>FailForMissingAdapter </td><td>        OK       </td><td>       -             </td><td>      -        </td><td>       OK          </td></tr>
+   <tr><td>FailForMissingAdapter </td><td>        OK       </td><td>       OK             </td><td>      -        </td><td>       OK          </td></tr>
    <tr><td>IgnoreMissingAdapters </td><td>        OK       </td><td>       OK            </td><td>      OK       </td><td>       OK          </td></tr>
-   <tr><td>CreateMissingAdapters </td><td>        OK       </td><td>       -             </td><td>      -        </td><td>       -           </td></tr>
+   <tr><td>CreateMissingAdapters </td><td>        OK       </td><td>       OK            </td><td>      -        </td><td>       -           </td></tr>
  </table>
  
  If you want to explicitely ignore some field, use [[AnythingMatcher]].   
@@ -714,7 +716,7 @@ shared class ObjectMatcher<T> (
     
     String simpleClassName(Object obj) {
         String cn = className(obj); 
-        return cn.split(":", true, true).last else cn;
+        return cn.split((Character c) => c==':', true, true).last else cn;
     }
     
     "Matching fails if:
