@@ -54,8 +54,8 @@ Installation
     git clone https://github.com/jpragey/matcher4cl
 
     cd matcher4cl/
-    # With ant: 
-    ant clean compile test doc
+    # With ant ('<ceylon-trunk dir>' is your git ceylon repository): 
+    ant -Dceylon.home=<ceylon-trunk dir>/ceylon-dist/dist clean publish
     
     # Without ant: 
     ceylon compile org.matcher4cl.{core,demo,test}

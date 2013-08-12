@@ -1,10 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
     Sample Ceylon build script using Ant.
+    
+    ant -Dceylon.home=<ceylon-trunk dir>/ceylon-dist/dist clean publish
+    
 -->
 <project name="org.matcher4cl" default="test">
 
-    <property name="ceylon.home" value="/home/jpragey/projects/ceylon/ceylon-trunk/ceylon-dist/dist"/>
+    <property name="ceylon.home" value="/usr/share/ceylon/0.6"/>
     <property name="ceylon.ant.lib" value="${ceylon.home}/lib/ceylon-ant.jar"/>
     <property name="source.encoding" value="UTF-8"/>
 
