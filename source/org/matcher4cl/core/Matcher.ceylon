@@ -177,24 +177,35 @@ shared class StringMatcher(
                 d = MatchDescription(null, normalStyle, expected, actual, descriptor);
             } else {
                 
+                variable Description? sizeDifferDescription = null;
                 variable Description? failDescription = null;
                 if(actString.size != expString.size) {
-                    failDescription = StringDescription(" Sizes: actual=``actString.size`` != expected=``expString.size``"); 
-                } else {
-                    Iterator<Character> expIt = expString.iterator();
-                    Iterator<Character> actIt = actString.iterator();
-                    variable Integer index = 0;
-                    while(!is Finished a = actIt.next()) {
-                        if(!is Finished e = expIt.next()) {
-                            if(a != e) {
-                                
-                                failDescription = StringDescription(
-                                    ": expected[``index``]=\'``e``\'(``e.integer``=#``toHex(e)``) != actual[``index``]=\'``a``\'(``a.integer``=#``toHex(a)``)");
-                                break; 
+                    sizeDifferDescription = StringDescription(" Sizes: actual=``actString.size`` != expected=``expString.size``"); 
+                } 
+//                else {
+                Iterator<Character> expIt = expString.iterator();
+                Iterator<Character> actIt = actString.iterator();
+                variable Integer index = 0;
+                while(!is Finished a = actIt.next()) {
+                    if(!is Finished e = expIt.next()) {
+                        if(a != e) {
+                            
+                            value charDifferDescr = StringDescription(
+                                ": expected[``index``]=\'``e``\'(``e.integer``=#``toHex(e)``) != actual[``index``]=\'``a``\'(``a.integer``=#``toHex(a)``)");
+                            
+                            if(exists sd = sizeDifferDescription) {
+                                failDescription = TreeDescription(sd, {charDifferDescr});
+                            } else {
+                                failDescription = charDifferDescr;
                             }
+                            break; 
                         }
-                        index++;
                     }
+                    index++;
+                }
+                
+                if(exists sd = sizeDifferDescription, !failDescription exists) {
+                    failDescription = sd;
                 }
                 
                 if(exists fd = failDescription) {

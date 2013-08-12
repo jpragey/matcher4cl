@@ -475,6 +475,10 @@ void stringMatcherTest() {
     assertEquals("\"ab\"/<<<\"a\">>> Sizes: actual=1 != expected=2", 
         dToS(StringMatcher("ab").match("a").matchDescription));
 
+    assertTrue(StringMatcher("ab").match("acd").failed);
+    assertEquals("\"ab\"/<<<\"acd\">>> Sizes: actual=3 != expected=2: expected[1]='b'(98=#62) != actual[1]='c'(99=#63)", 
+        dToS(StringMatcher("ab").match("acd").matchDescription));
+
     assertTrue(StringMatcher("ab").match(null).failed);
     assertEquals("A String was expected, found null: \"ab\"/<<<<null>>>>", 
         dToS(StringMatcher("ab").match(null).matchDescription));
