@@ -367,11 +367,11 @@ void typeMatcherTest() {
         dToS(TypeMatcher<String>().match("Hello").matchDescription));
     
     assertFalse(TypeMatcher<Integer>().match("Hello").succeeded);
-    assertEquals("ERR: wrong type: found ceylon.language.String: <<<\"Hello\">>>", 
+    assertEquals("ERR: wrong type: expected Integer, found ceylon.language.String: <<<\"Hello\">>>", 
         dToS(TypeMatcher<Integer>().match("Hello").matchDescription));
     
     assertFalse(TypeMatcher<Integer>().match(null).succeeded);
-    assertEquals("ERR: wrong type: found <null>: <<<<null>>>>", 
+    assertEquals("ERR: wrong type: expected Integer, found <null>: <<<<null>>>>", 
         dToS(TypeMatcher<Integer>().match(null).matchDescription));
     
     
@@ -380,12 +380,12 @@ void typeMatcherTest() {
         dToS(TypeMatcher<Sequence<Integer>>().match({1,2,3}).matchDescription));
     
     assertFalse(TypeMatcher<Sequence<Integer>>().match("Hello").succeeded);
-    assertEquals("ERR: wrong type: found ceylon.language.String: <<<\"Hello\">>>", 
+    assertEquals("ERR: wrong type: expected [Integer+], found ceylon.language.String: <<<\"Hello\">>>", 
         dToS(TypeMatcher<Sequence<Integer>>().match("Hello").matchDescription));
 
         
     assertFalse(TypeMatcher<A<Integer>>().match(A<String>()).succeeded);
-    assertEquals("ERR: wrong type: found org.matcher4cl.test.A: <<<A>>>", 
+    assertEquals("ERR: wrong type: expected A<Integer>, found org.matcher4cl.test.A<String>: <<<A>>>", 
         dToS(TypeMatcher<A<Integer>>().match(A<String>()).matchDescription));
     
     assertTrue(TypeMatcher<A<Integer>>().match(A<Integer>()).succeeded);
@@ -405,7 +405,7 @@ void notNullMatcherTest() {
         dToS(NotNullMatcher().match("Hello").matchDescription));
     
     assertFalse(NotNullMatcher().match(null).succeeded);
-    assertEquals("ERR: wrong type: found <null>: <<<<null>>>>",
+    assertEquals("ERR: wrong type: expected Object, found <null>: <<<<null>>>>",
         dToS(NotNullMatcher().match(null).matchDescription));
 }
 

@@ -57,7 +57,7 @@ shared interface Matcher {
  
  If your class is somewhat complex (eg it has fields), [[ObjectMatcher]] may be more appropriate. 
  "
-see (`EqualsMatcher`, `IdentifiableMatcher`)
+see (`class EqualsMatcher`, `class IdentifiableMatcher`)
 by ("Jean-Pierre Ragey")
 shared abstract class EqualsOpMatcher<T>(
     "The expected value"
@@ -486,7 +486,7 @@ shared class MapMatcher<Key, Item>(
 "Adapter for a custom class T field, to by used with [[ObjectMatcher]].
  The field of actual value is returned by `field()`.
  "
-see (`ObjectMatcher`)     
+see (`class ObjectMatcher`)     
 by ("Jean-Pierre Ragey")
 shared class FieldAdapter<T>(
     "Class field name, for description"
@@ -566,7 +566,7 @@ shared abstract class MissingAdapterStrategy<T>() given T satisfies Object {
  
  Note that it works only for shared top-level classes and non-shared nested classes (due to current Ceylon metaprogramming limitations). 
  "
-see (`ObjectMatcher`) 
+see (`class ObjectMatcher`) 
 shared class FailForMissingAdapter<T>() extends MissingAdapterStrategy<T>() given T satisfies Object {
     
     "Check if all `expected` fields have an adapter in `fieldAdapters` with the same name.
@@ -601,7 +601,7 @@ shared class FailForMissingAdapter<T>() extends MissingAdapterStrategy<T>() give
 }
 "[[MissingAdapterStrategy]] that doesn't care about missing field adapters: field adapters are always optional.
  "
-see (`ObjectMatcher`) 
+see (`class ObjectMatcher`) 
 shared class IgnoreMissingAdapters<T>() extends MissingAdapterStrategy<T>() given T satisfies Object {
     shared actual Description | {FieldAdapter<T> *} createMissingAdapters(T expected, {FieldAdapter<T> *} fieldAdapters, Matcher (Object? ) matcherResolver) {
         return {};
@@ -612,7 +612,7 @@ shared class IgnoreMissingAdapters<T>() extends MissingAdapterStrategy<T>() give
  
  Note that it works only for shared top-level classes (due to current Ceylon metaprogramming limitations). 
  "
-see (`ObjectMatcher`) 
+see (`class ObjectMatcher`) 
 shared class CreateMissingAdapters<T>() extends MissingAdapterStrategy<T>() given T satisfies Object {
     
     shared actual Description | {FieldAdapter<T> *} createMissingAdapters(T expected, {FieldAdapter<T> *} fieldAdapters, Matcher (Object? ) matcherResolver) {
@@ -966,12 +966,12 @@ shared class TypeMatcher<T> (
         } else {
             variable String actClassName ="<null>";
             if(exists actual) {
-                actClassName = className(actual);
+                value t = type(actual);
+                actClassName = "``t.declaration.packageContainer.name``.``t.string``";
             }
-            // TODO: find expected type (eg by metaprogramming) 
-            Description fd = StringDescription("ERR: wrong type: found ``actClassName``: ", normalStyle);
+            
             result = MatcherResult(false, CatDescription{
-                fd, 
+                StringDescription("ERR: wrong type: expected `` `T` ``, found ``actClassName``: ", normalStyle), 
                 ValueDescription(highlighted, actual, descriptor)
             });
         }
