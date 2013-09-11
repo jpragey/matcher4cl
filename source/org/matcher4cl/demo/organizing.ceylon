@@ -1,5 +1,5 @@
-import org.matcher4cl.core { Descriptor, DefaultDescriptor, DescriptorEnv, Matcher, ObjectMatcher, defaultResolver, EqualsMatcher, FieldAdapter }
-import org.matcher4cl.core { defaultAssertThat = assertThat, Is}
+import org.matcher4cl.core { Descriptor, DefaultDescriptor, DescriptorEnv, Matcher, ObjectMatcher, defaultResolver, EqualsMatcher, 
+    FieldAdapter, defaultAssertThat = assertThat, Is}
 
 // Some custom class
 shared class MyClass(shared String text) {}
