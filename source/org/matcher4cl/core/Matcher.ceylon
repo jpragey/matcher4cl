@@ -489,14 +489,15 @@ shared class MapMatcher<Key, Item>(
 see (`class ObjectMatcher`)     
 by ("Jean-Pierre Ragey")
 shared class FieldAdapter<T>(
-    "Class field name, for description"
-    shared String fieldName,
-    "Matcher for the expected field"
-    shared Matcher matcher,
-    "Return the value of the field of `actual`"
-    shared Object? (T) field
-    ) 
-    given T satisfies Object
+"Class field name, for description"
+//shared String fieldName,
+shared Attribute<Nothing, Anything> attribute,
+        "Matcher for the expected field"
+shared Matcher matcher,
+        "Return the value of the field of `actual`"
+shared Object? (T) field
+) 
+        given T satisfies Object
 {
     shared MatcherResult match(T actual, Matcher (Object? ) matcherResolver) {
         try {
@@ -504,8 +505,34 @@ shared class FieldAdapter<T>(
             return matcher.match(actualField, matcherResolver);
             
         } catch (NoSuchFieldException | SecurityException | IllegalArgumentException | IllegalAccessException 
-                 | NoSuchMethodException | InvocationTargetException e) {
-            value descr = StringDescription("an ``className(e)`` occured while accessing field ``fieldName`` of ``className(actual)`` : ``e.message``", highlighted);
+                | NoSuchMethodException | InvocationTargetException e) {
+            value descr = StringDescription("an ``className(e)`` occured while accessing field ``attribute.declaration.name`` of ``className(actual)`` : ``e.message``", highlighted);
+            return MatcherResult(false, descr);
+        }
+        
+    }
+}
+
+""
+shared class FieldAdapterForDeclaration<T>(
+"Class field name, for description"
+    //shared String fieldName,
+    shared ValueDeclaration attribute,
+    "Matcher for the expected field"
+    shared Matcher matcher,
+    "Return the value of the field of `actual`"
+    shared Object? (T) field
+) 
+        given T satisfies Object
+{
+    shared MatcherResult match(T actual, Matcher (Object? ) matcherResolver) {
+        try {
+            Object? actualField = field(actual);
+            return matcher.match(actualField, matcherResolver);
+            
+        } catch (NoSuchFieldException | SecurityException | IllegalArgumentException | IllegalAccessException 
+                | NoSuchMethodException | InvocationTargetException e) {
+            value descr = StringDescription("an ``className(e)`` occured while accessing field ``attribute.name`` of ``className(actual)`` : ``e.message``", highlighted);
             return MatcherResult(false, descr);
         }
         
@@ -525,37 +552,37 @@ shared abstract class MissingAdapterStrategy<T>() given T satisfies Object {
      If OK, returns the created adapters; otherwise returns a [[Description]] of what went wrong (this error description will be considered as a match failure,
      thus will be included in the output messages).
      "
-    shared formal Description | {FieldAdapter<T> *} createMissingAdapters(
+        shared formal Description | {FieldAdapterForDeclaration<T> *} createMissingAdapters(
         "The expected object"
         T expected, 
         "Current (custom) field adapters. You don't need to create an adapter for a field if there's an adapter for this field in this list."
-        {FieldAdapter<T> *} fieldAdapters, 
+        {FieldAdapterForDeclaration<T> *} fieldAdapters, 
         "Resolver"
         Matcher (Object? ) resolver);
 
     "Append [[FieldAdapter]]s to `fieldAdapters` for `expected` object fields that don't have one in `fieldAdapters`.
      "
-    shared default Description | Iterable<FieldAdapter<T>> appendMissingAdapters(
+    shared default Description | Iterable<FieldAdapterForDeclaration<T>> appendMissingAdapters(
         "The expected object"
         T expected, 
         "Current (custom) field adapters. You don't need to append an new adapter for a field if there's an adapter for this field in this list."
-        {FieldAdapter<T> *} fieldAdapters, 
+        {FieldAdapterForDeclaration<T> *} fieldAdapters, 
         "Resolver"
         Matcher (Object? ) resolver) 
     {
-        Description | {FieldAdapter<T> *} missingAdapters =  createMissingAdapters(expected, fieldAdapters, resolver);
+        Description | {FieldAdapterForDeclaration<T> *} missingAdapters =  createMissingAdapters(expected, fieldAdapters, resolver);
         if(is Description missingAdapters) {
             return missingAdapters;
         }
-        assert(is {FieldAdapter<T> *} missingAdapters);
+        assert(is {FieldAdapterForDeclaration<T> *} missingAdapters);
         
         // NOTE :  the following lines could be replaced by :
         //        {FieldAdapter<T> *} currentFieldAdapters = fieldAdapters.chain(missingAdapters);
         // but chain() return value clashes with type() (Ceylon bug)
-        SequenceBuilder<FieldAdapter<T>> fab = SequenceBuilder<FieldAdapter<T>>();
+        SequenceBuilder<FieldAdapterForDeclaration<T>> fab = SequenceBuilder<FieldAdapterForDeclaration<T>>();
         fab.appendAll(fieldAdapters); 
         fab.appendAll(missingAdapters); 
-        {FieldAdapter<T> *} currentFieldAdapters = fab.sequence;
+        {FieldAdapterForDeclaration<T> *} currentFieldAdapters = fab.sequence;
         
         return currentFieldAdapters;
     }
@@ -571,8 +598,9 @@ shared class FailForMissingAdapter<T>() extends MissingAdapterStrategy<T>() give
     
     "Check if all `expected` fields have an adapter in `fieldAdapters` with the same name.
      If not, returns an error Description."
-    shared actual Description | {FieldAdapter<T> *} createMissingAdapters(T expected, {FieldAdapter<T> *} fieldAdapters, Matcher (Object? ) matcherResolver) {
-        HashSet<String> adaptersFieldNames = HashSet<String>(fieldAdapters.map((FieldAdapter<T> fa) => fa.fieldName));
+    shared actual Description | {FieldAdapterForDeclaration<T> *} createMissingAdapters(T expected, {FieldAdapterForDeclaration<T> *} fieldAdapters, Matcher (Object? ) matcherResolver) {
+        //HashSet<String> adaptersFieldNames = HashSet<String>
+        //    (fieldAdapters.map((FieldAdapter<T> fa) => fa.attribute.declaration.name));
 
         value t = type(expected);
         ClassDeclaration classDeclaration;
@@ -589,11 +617,14 @@ shared class FailForMissingAdapter<T>() extends MissingAdapterStrategy<T>() give
 //        AttributeDeclaration[] attrs = classDeclaration.memberDeclarations<AttributeDeclaration>();
 //        AttributeDeclaration[] attrs = classDeclaration.memberDeclarations<AttributeDeclaration>();
         ValueDeclaration[] attrs = classDeclaration.memberDeclarations<ValueDeclaration>();
-        Set<String> objectFieldNames = HashSet(attrs.map((ValueDeclaration decl) => decl.name));
+//    Set<String> objectFieldNames = HashSet(attrs.map((ValueDeclaration decl) => decl.name));
+        Set<ValueDeclaration> objectFieldNames = HashSet(attrs);
+        HashSet<ValueDeclaration> adaptersFieldNames = HashSet<ValueDeclaration>
+            (fieldAdapters.map((FieldAdapterForDeclaration<T> fa) => fa.attribute));
         
-        Set<String> missingFieldNames = objectFieldNames.complement(adaptersFieldNames);
+        Set<ValueDeclaration> missingFieldNames = objectFieldNames.complement(adaptersFieldNames);
         if(!missingFieldNames.empty) {
-            String msg = "Class field(s) without FieldAdapter: `` ", ".join(missingFieldNames) ``";
+            String msg = "Class field(s) without FieldAdapter: `` ", ".join(missingFieldNames.map((ValueDeclaration elem) => elem.name)) ``";
             return StringDescription(msg);
         }
         return {};
@@ -603,7 +634,7 @@ shared class FailForMissingAdapter<T>() extends MissingAdapterStrategy<T>() give
  "
 see (`class ObjectMatcher`) 
 shared class IgnoreMissingAdapters<T>() extends MissingAdapterStrategy<T>() given T satisfies Object {
-    shared actual Description | {FieldAdapter<T> *} createMissingAdapters(T expected, {FieldAdapter<T> *} fieldAdapters, Matcher (Object? ) matcherResolver) {
+    shared actual Description | {FieldAdapterForDeclaration<T> *} createMissingAdapters(T expected, {FieldAdapterForDeclaration<T> *} fieldAdapters, Matcher (Object? ) matcherResolver) {
         return {};
     }    
 }
@@ -615,7 +646,7 @@ shared class IgnoreMissingAdapters<T>() extends MissingAdapterStrategy<T>() give
 see (`class ObjectMatcher`) 
 shared class CreateMissingAdapters<T>() extends MissingAdapterStrategy<T>() given T satisfies Object {
     
-    shared actual Description | {FieldAdapter<T> *} createMissingAdapters(T expected, {FieldAdapter<T> *} fieldAdapters, Matcher (Object? ) matcherResolver) {
+    shared actual Description | {FieldAdapterForDeclaration<T> *} createMissingAdapters(T expected, {FieldAdapterForDeclaration<T> *} fieldAdapters, Matcher (Object? ) matcherResolver) {
         
         // Get a ClassDeclaration for expected object.
         value t = type(expected);
@@ -631,44 +662,46 @@ shared class CreateMissingAdapters<T>() extends MissingAdapterStrategy<T>() give
         }
         
         ValueDeclaration[] attrs = classDeclaration.memberDeclarations<ValueDeclaration>();
-        Set<String> objectFieldNames = HashSet(attrs.map((ValueDeclaration decl) => decl.name));
+        Set<ValueDeclaration> objectFieldNames = HashSet(attrs);
         
-        HashSet<String> adaptersFieldNames = HashSet<String>(fieldAdapters.map((FieldAdapter<T> fa) => fa.fieldName));
+//        HashSet<String> adaptersFieldNames = HashSet<String>(fieldAdapters.map((FieldAdapter<T> fa) => fa.attribute.declaration.name));
+        HashSet<ValueDeclaration> adaptersFieldNames = HashSet<ValueDeclaration>(fieldAdapters.map((FieldAdapterForDeclaration<T> fa) => fa.attribute));
         
         SequenceBuilder<Description> errBuilder = SequenceBuilder<Description>();
         
-        Set<String> checkedButUndefined = adaptersFieldNames.complement(objectFieldNames);
+        Set<ValueDeclaration> checkedButUndefined = adaptersFieldNames.complement(objectFieldNames);
         if(!checkedButUndefined.empty) {
-            String msg = "FieldAdapter(s) without class fields: `` ", ".join(checkedButUndefined) ``";
+            String msg = "FieldAdapter(s) without class fields: `` ", ".join(checkedButUndefined.map((ValueDeclaration elem) => elem.name)) ``";
             errBuilder.append(StringDescription(msg));
         }
         
-        SequenceBuilder<FieldAdapter<T>> missingAdaptersBuilder = SequenceBuilder<FieldAdapter<T>>();
+        SequenceBuilder<FieldAdapterForDeclaration<T>> missingAdaptersBuilder = SequenceBuilder<FieldAdapterForDeclaration<T>>();
 
-        Set<String> definedButNotChecked = objectFieldNames.complement(adaptersFieldNames);
+        Set<ValueDeclaration> definedButNotChecked = objectFieldNames.complement(adaptersFieldNames);
         if(!definedButNotChecked.empty) {
             
-            for(fieldName in definedButNotChecked) {
+            for(valueDecl in definedButNotChecked) {
                 // 
-                ValueDeclaration? attrDecl = classDeclaration.getMemberDeclaration<ValueDeclaration>(fieldName);
-                assert (exists attrDecl);
+                //ValueDeclaration? attrDecl = classDeclaration.getMemberDeclaration<ValueDeclaration>(fieldName);
+                //assert (exists attrDecl);
                 Object? extractor(Object act)  {
-                    Value<Anything> attr = attrDecl.apply(act); 
+                    Value<Anything> attr = valueDecl.apply(act); 
                     return attr.get() else null;
                 }
                 Object? expectedField;
                 try {
-                    expectedField = attrDecl.apply(expected).get() else null;
+                    expectedField = valueDecl.apply(expected).get() else null;
                 } catch (RuntimeException e) {
                     return TreeDescription(StringDescription(e.message), [ 
-                        StringDescription("A RuntimeException occured while getting field ``fieldName`` of expected object of type ``classDeclaration.name``. "),
+                    StringDescription("A RuntimeException occured while getting field ``valueDecl.name`` of expected object of type ``classDeclaration.name``. "),
                         StringDescription("Note that ObjectMatcher with CreateMissingAdapters strategy only supports top-level shared classes (Ceylon current limitation)."),
                         StringDescription("In this case, consider using IgnoreMissingAdapters and defining adapters for all fields.")
                     ]);
                     
                 }
                 //AdapterBuilder ab = (Matcher (Object? ) resolver)  => FieldAdapter<T>(fieldName,resolver(expectedField),  extractor);
-                FieldAdapter<T> ab = FieldAdapter<T>(fieldName, matcherResolver(expectedField),  extractor);
+                //Attribute<Nothing, Anything> attribute = valueDecl.apply();
+                FieldAdapterForDeclaration<T> ab = FieldAdapterForDeclaration<T>(valueDecl, matcherResolver(expectedField),  extractor);
                 missingAdaptersBuilder.append(ab);
             }
         }
@@ -737,11 +770,15 @@ shared class ObjectMatcher<T> (
      "
     shared actual MatcherResult match(Object? actual, Matcher (Object? ) matcherResolver) {
         
-        Description | Iterable<FieldAdapter<T>> currentFieldAdapters = missingAdapterStrategy.appendMissingAdapters(expected, fieldAdapters, matcherResolver);
+        Description | Iterable<FieldAdapterForDeclaration<T>> currentFieldAdapters = missingAdapterStrategy.appendMissingAdapters(
+                expected, 
+                fieldAdapters.map((FieldAdapter<T> fa) => FieldAdapterForDeclaration<T>(fa.attribute.declaration, fa.matcher, fa.field)), 
+                matcherResolver);
+        
         if(is Description currentFieldAdapters) {
             return MatcherResult(false, currentFieldAdapters);
         }
-        assert(is Iterable<FieldAdapter<T>> currentFieldAdapters);
+        assert(is Iterable<FieldAdapterForDeclaration<T>> currentFieldAdapters);
         
         if(is T actual) {
             
@@ -754,7 +791,7 @@ shared class ObjectMatcher<T> (
                 if(fieldResult.failed) {
                     succeeded = false;
                 }
-                fieldDescrSb.append(ObjectFieldDescription(fieldMatcher.fieldName, fieldResult.matchDescription));
+                fieldDescrSb.append(ObjectFieldDescription(fieldMatcher.attribute.name, fieldResult.matchDescription));
             }
             Description prefix = StringDescription(simpleClassName(expected), matchStyle(succeeded));
             ObjectDescription objectDescription = ObjectDescription (prefix, fieldDescrSb.sequence);
@@ -964,11 +1001,7 @@ shared class TypeMatcher<T> (
         if(is T actual) {
             result = MatcherResult(true, ValueDescription(normalStyle, actual, descriptor));
         } else {
-            variable String actClassName ="<null>";
-            if(exists actual) {
-                value t = type(actual);
-                actClassName = "``t.declaration.packageContainer.name``.``t.string``";
-            }
+            String actClassName = (actual exists) then type(actual).string else "<null>";
             
             result = MatcherResult(false, CatDescription{
                 StringDescription("ERR: wrong type: expected `` `T` ``, found ``actClassName``: ", normalStyle), 

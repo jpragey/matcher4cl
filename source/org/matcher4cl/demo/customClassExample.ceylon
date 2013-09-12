@@ -7,8 +7,8 @@ void customClassTest() {
     class User(shared String name, shared Integer age) {}
     // Our custom matcher
     class UserMatcher(User expected) extends ObjectMatcher<User>(expected, {
-        FieldAdapter<User>("name", EqualsMatcher(expected.name), (User actual)=>actual.name),
-        FieldAdapter<User>("age", EqualsMatcher(expected.age), (User actual)=>actual.age)
+        FieldAdapter<User>(`User.name`, EqualsMatcher(expected.name), (User actual)=>actual.name),
+        FieldAdapter<User>(`User.age`, EqualsMatcher(expected.age), (User actual)=>actual.age)
     }, 
     DefaultDescriptor(),    // Descriptor: see later 
     IgnoreMissingAdapters<User>()

@@ -1,6 +1,7 @@
 import ceylon.test { assertTrue, assertFalse, assertEquals, TestRunner, PrintingTestListener, fail }
 import org.matcher4cl.core{ EqualsMatcher, ListMatcher, MapMatcher, ObjectMatcher, FieldAdapter, Is, AllMatcher, AnyMatcher, NotMatcher, TypeMatcher, DescribedAsMatcher, StringDescription, normalStyle, AnythingMatcher, NotNullMatcher, IdentifiableMatcher, EqualsOpMatcher, DefaultDescriptor, Descriptor, highlighted, StringMatcher, MissingAdapterStrategy, FailForMissingAdapter, IgnoreMissingAdapters, CreateMissingAdapters }
 import java.lang { ClassCastException }
+import ceylon.language.model { Attribute }
 
 void equalsMatcherTest() {
     
@@ -104,8 +105,8 @@ void objectMatcherTest() {
 //    class TestClass0(name, age) {shared String name; shared Integer age;}
     TestClass0 expected = TestClass0("John", 20);
     {FieldAdapter<TestClass0> *} aFieldMatchers = {
-        FieldAdapter<TestClass0>("name", EqualsMatcher(expected.name), (TestClass0 actual)=>actual.name),
-        FieldAdapter<TestClass0>("age", EqualsMatcher(expected.age), (TestClass0 actual)=>actual.age)
+        FieldAdapter<TestClass0>(`TestClass0.name`, EqualsMatcher(expected.name), (TestClass0 actual)=>actual.name),
+        FieldAdapter<TestClass0>(`TestClass0.age`, EqualsMatcher(expected.age), (TestClass0 actual)=>actual.age)
     };
         
     ObjectMatcher<TestClass0> objectMatcher = ObjectMatcher<TestClass0> (expected, aFieldMatchers);
@@ -116,15 +117,15 @@ void objectMatcherTest() {
     assertEquals("<<<org.matcher4cl.test.TestClass0>>> {name: ('=='\"John\"/<<<\"Ted\">>>), age: ('=='20/<<<30>>>)}", 
         dToS(objectMatcher.match(TestClass0("Ted", 30)).matchDescription));
     
-    // -- Wrong field list 
-    ObjectMatcher<TestClass0> tooManyAdaptersObjectMatcher = ObjectMatcher<TestClass0> (expected, {
-        FieldAdapter<TestClass0>("name",   EqualsMatcher(expected.name), (TestClass0 actual)=>actual.name),
-        FieldAdapter<TestClass0>("age",    EqualsMatcher(expected.age), (TestClass0 actual)=>actual.age),
-        FieldAdapter<TestClass0>("gotcha", AnythingMatcher(), (TestClass0 actual)=>null)
-    });
-    assertFalse(tooManyAdaptersObjectMatcher.match(TestClass0("Ted", 30)).succeeded);
-    assertEquals("ObjectMatcher<org.matcher4cl.test.TestClass0>: FieldAdapter list and class fields don't match.FieldAdapter(s) without class fields: gotcha", 
-        dToS(tooManyAdaptersObjectMatcher.match(TestClass0("Ted", 30)).matchDescription));
+    //// -- Wrong field list 
+    //ObjectMatcher<TestClass0> tooManyAdaptersObjectMatcher = ObjectMatcher<TestClass0> (expected, {
+    //    FieldAdapter<TestClass0>(`TestClass0.name`,   EqualsMatcher(expected.name), (TestClass0 actual)=>actual.name),
+    //            FieldAdapter<TestClass0>(`TestClass0.age`,    EqualsMatcher(expected.age), (TestClass0 actual)=>actual.age),
+    //    FieldAdapter<TestClass0>("gotcha", AnythingMatcher(), (TestClass0 actual)=>null)
+    //});
+    //assertFalse(tooManyAdaptersObjectMatcher.match(TestClass0("Ted", 30)).succeeded);
+    //assertEquals("ObjectMatcher<org.matcher4cl.test.TestClass0>: FieldAdapter list and class fields don't match.FieldAdapter(s) without class fields: gotcha", 
+    //    dToS(tooManyAdaptersObjectMatcher.match(TestClass0("Ted", 30)).matchDescription));
     
 }
 
@@ -146,11 +147,11 @@ shared class ObjectMatcherTester() {
         assertEquals(matchResult, matcher.match(actual).succeeded);
         assertEquals(msg, dToS(matcher.match(actual).matchDescription));
     }
-    
+    //Attribute<Nothing, Anything> att = `SharedTopLevel.str0`;
     shared void allSharedTopLevelTests() {
         ObjectMatcher<SharedTopLevel> matcher(SharedTopLevel expected, MissingAdapterStrategy<SharedTopLevel> strategy)  
             => ObjectMatcher<SharedTopLevel> (expected, {
-                    FieldAdapter<SharedTopLevel>("str0",   EqualsMatcher(expected.str0), (SharedTopLevel actual)=>actual.str0)
+            FieldAdapter<SharedTopLevel>(`SharedTopLevel.str0`,   EqualsMatcher(expected.str0), (SharedTopLevel actual)=>actual.str0)
                 }, DefaultDescriptor(), strategy);
                 
         // SharedTopLevel
@@ -173,7 +174,7 @@ shared class ObjectMatcherTester() {
     shared void allNonSharedTopLevelTests() {
         ObjectMatcher<NonSharedTopLevel> matcher(NonSharedTopLevel expected, MissingAdapterStrategy<NonSharedTopLevel> strategy)  
             => ObjectMatcher<NonSharedTopLevel> (expected, {
-                    FieldAdapter<NonSharedTopLevel>("str0",   EqualsMatcher(expected.str0), (NonSharedTopLevel actual)=>actual.str0)
+            FieldAdapter<NonSharedTopLevel>(`NonSharedTopLevel.str0`,   EqualsMatcher(expected.str0), (NonSharedTopLevel actual)=>actual.str0)
                 }, DefaultDescriptor(), strategy);
                 
         // NonSharedTopLevel
@@ -195,7 +196,7 @@ shared class ObjectMatcherTester() {
     shared void allSharedNestedLevelTests() {
         ObjectMatcher<SharedNested> matcher(SharedNested expected, MissingAdapterStrategy<SharedNested> strategy)  
             => ObjectMatcher<SharedNested> (expected, {
-                    FieldAdapter<SharedNested>("str0",   EqualsMatcher(expected.str0), (SharedNested actual)=>actual.str0)
+            FieldAdapter<SharedNested>(`SharedNested.str0`,   EqualsMatcher(expected.str0), (SharedNested actual)=>actual.str0)
                 }, DefaultDescriptor(), strategy);
                 
         // SharedNested (Not supported yet)
@@ -223,7 +224,7 @@ shared class ObjectMatcherTester() {
     shared void allNonSharedNestedLevelTests() {
         ObjectMatcher<NonSharedNested> matcher(NonSharedNested expected, MissingAdapterStrategy<NonSharedNested> strategy)  
             => ObjectMatcher<NonSharedNested> (expected, {
-                    FieldAdapter<NonSharedNested>("str0",   EqualsMatcher(expected.str0), (NonSharedNested actual)=>actual.str0)
+            FieldAdapter<NonSharedNested>(`NonSharedNested.str0`,   EqualsMatcher(expected.str0), (NonSharedNested actual)=>actual.str0)
                 }, DefaultDescriptor(), strategy);
                 
         // NonSharedNested
@@ -367,11 +368,11 @@ void typeMatcherTest() {
         dToS(TypeMatcher<String>().match("Hello").matchDescription));
     
     assertFalse(TypeMatcher<Integer>().match("Hello").succeeded);
-    assertEquals("ERR: wrong type: expected Integer, found ceylon.language.String: <<<\"Hello\">>>", 
+    assertEquals("ERR: wrong type: expected ceylon.language::Integer, found ceylon.language::String: <<<\"Hello\">>>", 
         dToS(TypeMatcher<Integer>().match("Hello").matchDescription));
     
     assertFalse(TypeMatcher<Integer>().match(null).succeeded);
-    assertEquals("ERR: wrong type: expected Integer, found <null>: <<<<null>>>>", 
+    assertEquals("ERR: wrong type: expected ceylon.language::Integer, found <null>: <<<<null>>>>", 
         dToS(TypeMatcher<Integer>().match(null).matchDescription));
     
     
@@ -380,12 +381,12 @@ void typeMatcherTest() {
         dToS(TypeMatcher<Sequence<Integer>>().match({1,2,3}).matchDescription));
     
     assertFalse(TypeMatcher<Sequence<Integer>>().match("Hello").succeeded);
-    assertEquals("ERR: wrong type: expected [Integer+], found ceylon.language.String: <<<\"Hello\">>>", 
+    assertEquals("ERR: wrong type: expected ceylon.language::Sequence<ceylon.language::Integer>, found ceylon.language::String: <<<\"Hello\">>>", 
         dToS(TypeMatcher<Sequence<Integer>>().match("Hello").matchDescription));
 
         
     assertFalse(TypeMatcher<A<Integer>>().match(A<String>()).succeeded);
-    assertEquals("ERR: wrong type: expected A<Integer>, found org.matcher4cl.test.A<String>: <<<A>>>", 
+        assertEquals("ERR: wrong type: expected org.matcher4cl.test::A<ceylon.language::Integer>, found org.matcher4cl.test::A<ceylon.language::String>: <<<A>>>", 
         dToS(TypeMatcher<A<Integer>>().match(A<String>()).matchDescription));
     
     assertTrue(TypeMatcher<A<Integer>>().match(A<Integer>()).succeeded);
@@ -405,7 +406,7 @@ void notNullMatcherTest() {
         dToS(NotNullMatcher().match("Hello").matchDescription));
     
     assertFalse(NotNullMatcher().match(null).succeeded);
-    assertEquals("ERR: wrong type: expected Object, found <null>: <<<<null>>>>",
+    assertEquals("ERR: wrong type: expected ceylon.language::Object, found <null>: <<<<null>>>>",
         dToS(NotNullMatcher().match(null).matchDescription));
 }
 
