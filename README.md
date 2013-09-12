@@ -20,7 +20,7 @@ Matcher4cl
 Matcher4cl is a matcher library for the Ceylon programming language.
 
 Unit testing involves matching calculated values against expected ones; matcher4cl simplifies matching 'complex' values:
- - provides easy-to-read messages;
+ - provides relevant human-readable messages (tree presentation, footnotes);
  - provides default matchers for lists and maps;
  - integrates easily with ceylon test.
 

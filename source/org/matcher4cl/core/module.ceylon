@@ -9,6 +9,8 @@
          void doTest() {
             assertThat (\"The actual value\", Is(\"The expected one\"));
          }
+     And add the import to your module.ceylon:
+         import org.matcher4cl.core \"0.1.0\";
      Run it as a usual ceylon application, and you'll get  an exception stating:
          \"The expected one\"/<<<\"The actual value\">>>: expected[4]='e'(101=#65) != actual[4]='a'(97=#61)
      
@@ -25,74 +27,134 @@
          }
      The result is:
          <<<Country>>> {capital: (\"New York\"/<<<\"New york\">>>: expected[4]='Y'(89=#59) != actual[4]='y'(121=#79)), name: (\"USA\")}
+
      
+     
+     
+     
+     
+          
      What if you need to compare more complex structures (eg maps of lists containing custom objects)? Well, you need a bit of infrastructure:
      
-         import org.matcher4cl.core { defaultAssertThat = assertThat } // Because we'll redefine assertThat()
+         import org.matcher4cl.core { defaultAssertThat = assertThat,  // Because we'll redefine assertThat() 
+         ... }
 
-         // Our custom class
-         shared class Country(shared String name, shared String capital) {}
-        
-         // -- Infrastructure (typically defined once in the project)
-         // Converts objects to String - needed because Country has no suitable \`string\` property
+         // Our custom classes
+    	 shared class City(shared String name) {}
+    	 shared class Country(shared String name, shared String capital, shared {City *} cities={}) {}
+
+         // -- Infrastructure: a Descriptor converts custom objects to strings, for displaying purpose only.
+         // Not needed for custom classes that have a suitable \`string\` property.
          object descriptor extends DefaultDescriptor(
-            (Object? obj, DescriptorEnv descriptorEnv) {
+             (Object? obj, DescriptorEnv descriptorEnv) {
+                if(is City obj) {
+                    return \"City(\``obj.name\``)\";
+                }
                 if(is Country obj) {
-                    return \"Country(\`\`obj.name\`\`: \`\`obj.capital\`\`)\";
+                    return \"Country(\``obj.name\``: \``obj.capital\``)\";
                 }
                 return null;
-            }
+             }
          ){}
-        
-         // Helps getting the right matcher for objects embedded in lists, maps, etc
+
+         // Resolver method: define how classes must be matched.
+         // defaultResolver() will look first for matchers in its first argument; if not found,
+         // it return some default matcher (suitable for Integer, String, Map, Iterable,etc). 
          Matcher (Object?) resolver = defaultResolver(
             (Object? expected){
-                if(is Country expected) {
-                    return ObjectMatcher<Country>{expected = expected; descriptor = descriptor;};
+                if(is City expected) {
+                    return ObjectMatcher<City>(
+                        expected,   // Expected City object 
+                        {},         // No explicit FieldAdapter: ObjectMatcher looks for for shared properties by metamodel
+                                    // and create one using this resolver.
+                                    // So for the 'String name' property, a StringMatcher will be created.  
+                        descriptor);
                 }
-                return null;
+                if(is Country expected) {
+                    return ObjectMatcher<Country>(
+                        expected,   // Expected Country object.
+                        {},         // No explicit FieldAdapter: ObjectMatcher looks for for shared properties by metamodel
+                                    // and create one using this resolver.
+                                    // So for the '{City *} cities' property, a ListMatcher will be created 
+                                    //  ('defaultResolver()' default for iterators); then this ListMatcher will create a Matcher 
+                                    //  for each City in the same way (using this 'defaultResolver()'); that is, 
+                                    // ListMatcher will create the ObjectMatcher<City> we've just defined.
+                        descriptor);
+                }
+               return null;
             }
-         , descriptor);
-        
-         // Redefine assertThat to use our custom resolver
+        	, descriptor);
+             
+         // Now we redefine 'assertThat' to use our custom resolver:
          void assertThat(Object? actual, Matcher matcher)
-                => defaultAssertThat(actual, matcher, resolver); 
+             => defaultAssertThat(actual, matcher, resolver); 
+
+     
+     
+     
         
      Now the tests themselves:
-        
-         void countryTest3() {
-            
-            // -- The test itself
-            assertThat(
-                // Actual object
-                LazyMap<String, {Country*}>{
-                    \"Asia\"    -> [Country(\"China\", \"Beijing\")],
-                    \"America\" -> [Country(\"USA\", \"New york\")],  // Notice 'york' with lower case 'y''
-                    \"Europe\"  -> [Country(\"England\", \"London\"), Country(\"France\", \"Paris\")]
-                }, 
-                // Expected object
-                Is(LazyMap<String, {Country*}>{
-                    \"Asia\"    -> [Country(\"China\", \"Beijing\")],
-                    \"America\" -> [Country(\"USA\", \"New York\")],
-                    \"Europe\"  -> [Country(\"England\", \"London\"), Country(\"France\", \"Paris\")]
-                }));
-        
+         void countryTest() {
+     
+         // -- The test itself
+         assertThat(
+             // Actual object
+             LazyMap<String, {Country*}>{
+                 \"Asia\"    -> [Country(\"China\", \"Beijing\")],
+                 \"America\" -> [Country(\"USA\", \"New York\", {City(\"Waschington\")})],  // Note: 'sch' in 'Waschington' 
+                 \"Europe\"  -> [Country(\"England\", \"London\"), 
+                               Country(\"France\", \"Paris\", {City(\"Lyon\")})] //Note: unexpected {City(\"Lyon\")} 
+             }, 
+             // Expected object
+             Is(LazyMap<String, {Country*}>{
+                 \"Asia\"    -> [Country(\"China\", \"Beijing\")],
+                 \"America\" -> [Country(\"USA\", \"New York\", {City(\"Washington\")})],
+                \"Europe\"  -> [Country(\"England\", \"London\"), 
+                               Country(\"France\", \"Paris\")]
+             }));
+     
          }
+        
+     In Eclipse, you can run it as aCeylon application, or a usual Ceylon test, if the ceylon test plugin is installed (dont't forget to add
+          import ceylon.test \"0.6\";
+     to module.ceylon).
 
      The message depicts the objects structure, with emphasis on what went wrong:
      
-         1 values mismatched: {
-           \"Asia\"->[Country(China: Beijing)], 
-           \"America\"->Value mismatch for \"ListMatcher\": [Country(USA: New York)]/<<<[Country(USA: New york)]>>>
-               Cause:
-               1 mismatched: {
-                 <<<At position 0 >>>ObjectMatcher: <<<Country>>> {capital: (\"New York\"/<<<\"New york\">>>: expected[4]='Y'(89=#59) != actual[4]='y'(121=#79)), name: (\"USA\")}
-               }, 
-           \"Europe\"->[Country(England: London), Country(France: Paris)]
-         }     
+         2 values mismatched: {
+              \"Asia\"->[Country(China: Beijing)], 
+              \"America\"->Value mismatch for \"ListMatcher\": [Country(USA: New York)]/<<<[Country(USA: New York)]>>>
+                  Cause:
+                  1 mismatched: {
+                    <<<At position 0 >>>ObjectMatcher: <<<org.matcher4cl.mytest.Country>>> {
+                      name: (\"USA\"), 
+                      capital: (\"New York\"), 
+                      cities: (1 mismatched: {
+                          <<<At position 0 >>>ObjectMatcher: <<<org.matcher4cl.mytest.City>>> {
+                            name: (\"Washington\"/<<<\"Waschington\">>> Sizes: actual=11 != expected=10
+                                : expected[3]='h'(104=#68) != actual[3]='c'(99=#63))
+                          }
+                        })
+                    }
+                  }, 
+              \"Europe\"->Value mismatch for \"ListMatcher\": [Country(England: London), Country(France: Paris)]/<<<[Country(England: London), Country(France: Paris)]>>>
+                  Cause:
+                  1 mismatched: {
+                    org.matcher4cl.mytest.Country {
+                      name: (\"England\"), 
+                      capital: (\"London\"), 
+                      cities: ({})
+                    }, 
+                    <<<At position 1 >>>ObjectMatcher: <<<org.matcher4cl.mytest.Country>>> {
+                      name: (\"France\"), 
+                      capital: (\"Paris\"), 
+                      cities: (Actual list is longer than expected: 0 expected, 1 actual:  {}
+                         => ERR 1 actual not in expected list:  {City(Lyon)})
+                    }
+                  }
+            }
+
      
-     
-     In Eclipse, you can run it as a usual Ceylon test, if the ceylon test plugin is installed.
      
      The basic usage pattern consists in writing all customizations once, and just use \"assertThat (actual, Is(expected));\" for all tests;
      see the \"Organizing tests\" section.
@@ -187,7 +249,10 @@
                 function (Float s, Integer n) => s + 1.0/(n*n));
             assertThat(actual, FloatMatcher((pi*pi)/6, 0.001));
          } 
-              
+     This test succeeds; but if you set the relative error to 0.00001, it will print:
+         <<<== within 0.001% : >>>1.6449340668482264/<<<1.6439345666815615>>>
+     
+     
      ## Custom class matchers
      
      Custom class matchers can be created using [[ObjectMatcher]] and [[FieldAdapter]]. `FieldAdapter` delegates 
@@ -201,30 +266,35 @@
          shared class User(shared String name, shared Integer age) {}
         
          void customClassTest() {
-            // Our custom matcher - all field matchers are created by reflexion
+            // Our custom matcher - all field matchers are created by reflection
             class UserMatcher(User expected) extends ObjectMatcher<User>(expected) {}
      
             assertThat(User(\"Ted\", 30), UserMatcher(User(\"John\", 20)));
          }
      Result:
-         <<<User>>> {name: (\"John\"/<<<\"Ted\">>> Sizes: actual=3 != expected=4), age: ('=='20/<<<30>>>)}
-     
+            <<<org.matcher4cl.mytest.User>>> {
+              name: (\"John\"/<<<\"Ted\">>> Sizes: actual=3 != expected=4
+                  : expected[0]='J'(74=#4a) != actual[0]='T'(84=#54)), 
+              age: ('=='20/<<<30>>>)
+            }
+                        
      If you need to customize field matching, add explicitely field adapters:
      
-         void customClassTest() {
-            
+    	 void customClassTest() {
+         
             // Our custom matcher, with explicit field adapters
-            class UserMatcher(User expected) extends ObjectMatcher<User>(user, {
-                FieldAdapter<User>(\"name\", EqualsMatcher(expected.name), (User actual)=>actual.name),
-                FieldAdapter<User>(\"age\", EqualsMatcher(expected.age), (User actual)=>actual.age)
+            class UserMatcher(User expected) extends ObjectMatcher<User>(expected, {
+                FieldAdapter<User>(`User.name`, EqualsMatcher(expected.name)),
+                FieldAdapter<User>(`User.age`,  EqualsMatcher(expected.age))
             }) {}
-                
+             
             // The test
-            assertThat(null, User(\"Ted\", 30), UserMatcher(User(\"John\", 20)));
-         }
+            assertThat(User(\"Ted\", 30), UserMatcher(User(\"John\", 20)));
+    	 }
+     
 
      This works well because [[ObjectMatcher]] uses a [[CreateMissingAdapters]] as [[MissingAdapterStrategy]] by default, wich tries 
-     to creates field adapters by reflexion. Reflexion works well with top-level shared classes; for nested or non-shared classes, 
+     to creates field adapters by reflection. Reflexion works well with top-level classes; for nested classes, 
      or for field matching customization, you may need other [[MissingAdapterStrategy]]:
      - [[FailForMissingAdapter]]: all fields must have an FieldAdapter, matching fails otherwise; 
      - [[IgnoreMissingAdapters]]: doesn't care about missing FieldAdapter(s);
@@ -290,10 +360,13 @@
          }
      
      Result:
-         1 mismatched: {
-            <<<At position 0 >>>ObjectMatcher: <<<User>>> {name: (\"John\"/<<<\"Ted\">>> Sizes: actual=3 != expected=4), age: ('=='20/<<<30>>>)}
-         }
-          
+            1 mismatched: {
+              <<<At position 0 >>>ObjectMatcher: <<<org.matcher4cl.mytest.User>>> {
+                name: (\"John\"/<<<\"Ted\">>> Sizes: actual=3 != expected=4
+                    : expected[0]='J'(74=#4a) != actual[0]='T'(84=#54)), 
+                age: ('=='20/<<<30>>>)
+              }
+            }
      
      # Descriptors
      
@@ -314,37 +387,36 @@
      [[DefaultDescriptor]] first agument (signature is `String?(Object? obj, DescriptorEnv descriptorEnv)`)
      
      For example suppose you need to match complex numbers: 
-       
-         void customDescriptorTest() {
-            // Class under test
-            class Complex(shared Float re, shared Float im) {
-                // Simple matching: defaultMatcherResolver returns an EqualMatcher 
-                //(which calls equals()) for unknown objects: 
-                shared actual Boolean equals(Object that) { 
-                    if(is Complex that) {
-                        return re == that.re && im == that.im;
-                    }
-                    return false;
+        	void customDescriptorTest() {
+                // Class under test
+                class Complex(shared Float re, shared Float im) {
+                   // Simple matching: defaultMatcherResolver returns an EqualMatcher 
+                   //(which calls equals()) for unknown objects: 
+                   shared actual Boolean equals(Object that) { 
+                       if(is Complex that) {
+                           return re == that.re && im == that.im;
+                       }
+                       return false;
+                   }
                 }
-            }
-            // Custom descriptor: customize Complex objects, otherwise use to DefaultDescriptor defaults 
-            Descriptor descriptor = DefaultDescriptor (
-                // delegate, tried first
-                (Object? obj, DescriptorEnv descriptorEnv) {
-                    if(is Complex obj) {
-                        return \"\``obj.re.string\`\` + \``obj.im.string\``i \";
-                    }
-                    return  null; // Use to DefaultDescriptor defaults
-                }
-            );
-
-            // Customize assertThat() 
-            value resolver = (Object? expected) => defaultMatcherResolver({}, descriptor)(expected);
-            void myAssertThat(Object? actual, Matcher matcher, String? userMsg = null) =>
-                assertThat(actual, matcher, resolver, userMsg); 
-        
-            myAssertThat(Complex(1.0, 0.1), Is(Complex(1.0, 0.0)));
-         }
+                // Custom descriptor: customize Complex objects, otherwise use to DefaultDescriptor defaults 
+                Descriptor descriptor = DefaultDescriptor (
+                   // delegate, tried first
+                   (Object? obj, DescriptorEnv descriptorEnv) {
+                       if(is Complex obj) {
+                           return \"\``obj.re.string\`` + \``obj.im.string\``i \";
+                       }
+                       return  null; // Use to DefaultDescriptor defaults
+                   }
+                );
+             
+                value resolver = defaultResolver(null, descriptor);
+                // Customize assertThat() 
+                void myAssertThat(Object? actual, Matcher matcher) =>
+                    assertThat(actual, matcher, resolver); 
+             
+                myAssertThat(Complex(1.0, 0.1), Is(Complex(1.0, 0.0)));
+        	}
      
      The assertion will print:
             '=='1.0 + 0.0i /<<<1.0 + 0.1i >>>
@@ -459,12 +531,15 @@
             );
             
             // Simplified by customizing assertThat()
-            void myAssertThat(Object? actual, Matcher matcher, String? userMsg = null) =>
-                assertThat(actual, matcher, resolver, userMsg); 
+            void myAssertThat(Object? actual, Matcher matcher) =>
+                assertThat(actual, matcher, resolver); 
         
             myAssertThat( {Account(\"123456\")}, Is({User(\"Ted\")}));
          }
-
+     
+     Result:
+         1 mismatched: {<<<At position 0 >>>ObjectMatcher: <<<A org.matcher4cl.mytest.User was expected, found org.matcher4cl.mytest.Account>>><<<Account [123456]>>>}
+     
      The assertion will print the faulty Account as `Account [123456]`; if the ObjectMatcher was built without the `descriptor` argument,
      it would be something like `org.matcher4cl.demo.customResolver1.Account@4348bd9`.
      
@@ -509,31 +584,31 @@
      
      We first need a `DescrWriter` specialized for HTML:
      - text: highlighted errors will be enclosed in a <span> with an \"error\" CSS style; '<', '>' and '&' will be escaped;
-     - new line/indent will use `<br/>` and `&nbsp;` ;
-     
-             class HtmlDescrWriter() satisfies DescrWriter {
+     - new line/indent will use `<br/>` and `&nbsp;`
 
-                shared actual void writeNewLineIndent(StringBuilder stringBuilder, Integer indentCount) {
-                    stringBuilder.append(\"<br/>\");
-                    stringBuilder.appendNewline();  // Optional, makes HTML easier to read
-                    for(Integer i in 0:indentCount) {
-                        stringBuilder.append(\"&nbsp;&nbsp;&nbsp;&nbsp;\");
-                    }
-                }
-                
-                value escapes = HashMap{'<' -> \"&lt;\", '>' -> \"&gt;\", '&' -> \"&amp;\"} ;
-                shared void escape(StringBuilder stringBuilder, String text) {
-                    for(Character c in text) {
-                        if(exists t = escapes[c]) {
-                            stringBuilder.append(t);
-                        } else {
-                            stringBuilder.appendCharacter(c);
-                        }
-                    }
-                }
-                
-                shared actual void writeText(StringBuilder stringBuilder, TextStyle style, String text) {
-                    if(errorStyleyle == style) {
+            class HtmlDescrWriter() satisfies DescrWriter {
+             
+               shared actual void writeNewLineIndent(StringBuilder stringBuilder, Integer indentCount) {
+                   stringBuilder.append(\"<br/>\");
+                   stringBuilder.appendNewline();  // Optional, makes HTML easier to read
+                   for(Integer i in 0:indentCount) {
+                       stringBuilder.append(\"&nbsp;&nbsp;&nbsp;&nbsp;\");
+                   }
+               }
+             
+               value escapes = HashMap{'<' -> \"&lt;\", '>' -> \"&gt;\", '&' -> \"&amp;\"} ;
+               shared void escape(StringBuilder stringBuilder, String text) {
+                   for(Character c in text) {
+                       if(exists t = escapes[c]) {
+                           stringBuilder.append(t);
+                       } else {
+                           stringBuilder.appendCharacter(c);
+                       }
+                   }
+               }
+             
+               shared actual void writeText(StringBuilder stringBuilder, TextStyle style, String text) {
+                    if(style == highlighted) {
                         stringBuilder.append(\"<span class=\\\"error\\\">\");
                         escape(stringBuilder, text);
                         stringBuilder.append(\"</span>\");
@@ -541,24 +616,24 @@
                         escape(stringBuilder, text);
                     }
                 }
-             }
+            }
+
 
      Now we need a method to convert a Description to a file:
-     
          void writeHtmlFile(Path filePath, Description description) {
-            
+             
             if(is File loc = filePath.resource) { // Remove existing file, if any
                 loc.delete();   
             }
-                
+         
             if(is Nil loc = filePath.resource) {
                 File file = loc.createFile();
                 Writer writer = file.writer();
                 writer.write(\"<html><head>
-                              <style type=\"text/css\">
-                                    .error {background-color:#FF183e;}
-                              </style>
-                              </head><body>\");
+                            <style type=\\\"text/css\\\">
+                                   .error {background-color:#FF183e;}
+                            </style>
+                            </head><body>\");
                 writer.write(\"<h1>Example report</h1>\");
                 
                 // write description
@@ -582,11 +657,12 @@
             }
          }
      
+     
      And now we can use it for test output (in /tmp/testReport.html):
      
          void htmlExample() {
             try {
-                assertThat(\"Demo\", [100, 11, [13, \"<Hello>\"]], Is([10, 11, [12, \"<World>\"]]));
+                assertThat([100, 11, [13, \"<Hello>\"]], Is([10, 11, [12, \"<World>\"]]));
                 
             } catch (MatchException e){
                 // Write `e.mismatchDescription` to /tmp/testReport.html
@@ -624,7 +700,7 @@
                    if(is MyClass expected) {
                        return ObjectMatcher<MyClass>(expected, {
                            // Add a FieldAdapter<MyClass> for each field here (if needed)
-                           FieldAdapter<MyClass>(\"text\", EqualsMatcher(expected.text), (MyClass act) => act.text)
+                           FieldAdapter<MyClass>(`MyClass.text`, EqualsMatcher(expected.text))
                        }) ;
                    }
                    return null;
@@ -637,8 +713,8 @@
 
          import org.matcher4cl.core { defaultAssertThat = assertThat, Is}
          
-         shared void assertThat(Object? actual, Matcher matcher, String? userMessage= null)
-            => defaultAssertThat(actual, matcher, testTools.resolver, userMessage); 
+         void assertThat(Object? actual, Matcher matcher)
+            => defaultAssertThat(actual, matcher, testTools.resolver); 
      
      Now you can use assertThat and Is for any objects, custom or not:
      
@@ -651,7 +727,7 @@
      
 by ("Jean-Pierre Ragey")
 license ("Apache Software License V2.0") 
-/*shared*/ module org.matcher4cl.core '0.1.0' {
+module org.matcher4cl.core '0.1.0' {
     import ceylon.test '0.6';
     import ceylon.collection '0.6';
     import java.base '7';
