@@ -24,7 +24,7 @@ object testTools {
            if(is MyClass expected) {
                return ObjectMatcher<MyClass>(expected, {
                    // Add a FieldAdapter<MyClass> for each field here
-                   FieldAdapter<MyClass>(`MyClass.text`, EqualsMatcher(expected.text), (MyClass act) => act.text)
+                   FieldAdapter<MyClass>(`MyClass.text`, EqualsMatcher(expected.text)/*, (MyClass act) => act.text*/)
                }) ;
            }
            return null;

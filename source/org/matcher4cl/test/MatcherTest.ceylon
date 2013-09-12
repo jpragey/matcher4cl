@@ -105,8 +105,8 @@ void objectMatcherTest() {
 //    class TestClass0(name, age) {shared String name; shared Integer age;}
     TestClass0 expected = TestClass0("John", 20);
     {FieldAdapter<TestClass0> *} aFieldMatchers = {
-        FieldAdapter<TestClass0>(`TestClass0.name`, EqualsMatcher(expected.name), (TestClass0 actual)=>actual.name),
-        FieldAdapter<TestClass0>(`TestClass0.age`, EqualsMatcher(expected.age), (TestClass0 actual)=>actual.age)
+        FieldAdapter<TestClass0>(`TestClass0.name`, EqualsMatcher(expected.name)),
+        FieldAdapter<TestClass0>(`TestClass0.age`, EqualsMatcher(expected.age))
     };
         
     ObjectMatcher<TestClass0> objectMatcher = ObjectMatcher<TestClass0> (expected, aFieldMatchers);
@@ -151,7 +151,7 @@ shared class ObjectMatcherTester() {
     shared void allSharedTopLevelTests() {
         ObjectMatcher<SharedTopLevel> matcher(SharedTopLevel expected, MissingAdapterStrategy<SharedTopLevel> strategy)  
             => ObjectMatcher<SharedTopLevel> (expected, {
-            FieldAdapter<SharedTopLevel>(`SharedTopLevel.str0`,   EqualsMatcher(expected.str0), (SharedTopLevel actual)=>actual.str0)
+            FieldAdapter<SharedTopLevel>(`SharedTopLevel.str0`,   EqualsMatcher(expected.str0))
                 }, DefaultDescriptor(), strategy);
                 
         // SharedTopLevel
@@ -174,7 +174,7 @@ shared class ObjectMatcherTester() {
     shared void allNonSharedTopLevelTests() {
         ObjectMatcher<NonSharedTopLevel> matcher(NonSharedTopLevel expected, MissingAdapterStrategy<NonSharedTopLevel> strategy)  
             => ObjectMatcher<NonSharedTopLevel> (expected, {
-            FieldAdapter<NonSharedTopLevel>(`NonSharedTopLevel.str0`,   EqualsMatcher(expected.str0), (NonSharedTopLevel actual)=>actual.str0)
+            FieldAdapter<NonSharedTopLevel>(`NonSharedTopLevel.str0`,   EqualsMatcher(expected.str0))
                 }, DefaultDescriptor(), strategy);
                 
         // NonSharedTopLevel
@@ -196,7 +196,7 @@ shared class ObjectMatcherTester() {
     shared void allSharedNestedLevelTests() {
         ObjectMatcher<SharedNested> matcher(SharedNested expected, MissingAdapterStrategy<SharedNested> strategy)  
             => ObjectMatcher<SharedNested> (expected, {
-            FieldAdapter<SharedNested>(`SharedNested.str0`,   EqualsMatcher(expected.str0), (SharedNested actual)=>actual.str0)
+            FieldAdapter<SharedNested>(`SharedNested.str0`,   EqualsMatcher(expected.str0))
                 }, DefaultDescriptor(), strategy);
                 
         // SharedNested (Not supported yet)
@@ -224,7 +224,7 @@ shared class ObjectMatcherTester() {
     shared void allNonSharedNestedLevelTests() {
         ObjectMatcher<NonSharedNested> matcher(NonSharedNested expected, MissingAdapterStrategy<NonSharedNested> strategy)  
             => ObjectMatcher<NonSharedNested> (expected, {
-            FieldAdapter<NonSharedNested>(`NonSharedNested.str0`,   EqualsMatcher(expected.str0), (NonSharedNested actual)=>actual.str0)
+            FieldAdapter<NonSharedNested>(`NonSharedNested.str0`,   EqualsMatcher(expected.str0))
                 }, DefaultDescriptor(), strategy);
                 
         // NonSharedNested
@@ -252,34 +252,6 @@ shared class ObjectMatcherTester() {
      
 }
 
-
-
-//
-//shared class ObjectMatcherTesterDummy() {
-//    shared class SharedNested(shared String str0, shared String str, shared Integer int) {}
-//  
-////    type(SharedNested("a", "b", 42));
-//  //ObjectMatcher<SharedNested> (SharedNested("a", "b", 42)/*expected*/, {
-//  //                  FieldAdapter<SharedNested>("str0",   EqualsMatcher(expected.str0), (SharedNested actual)=>actual.str0)
-//  //              }, DefaultDescriptor(), strategy)
-//  //  matcher(SharedNested("a", "b", 42), FailForMissingAdapter<SharedNested>());
-//    
-//    void doTest<T>(Object actual, ObjectMatcher<T> matcher, Boolean matchResult, String msg) given T satisfies Object {
-//        assertEquals(matchResult, matcher.match(actual).succeeded);
-//    }
-//    
-//    shared void allSharedNestedLevelTests() {
-//        ObjectMatcher<SharedNested> matcher(SharedNested expected, MissingAdapterStrategy<SharedNested> strategy)  
-//            => ObjectMatcher<SharedNested> (expected, {
-//                    FieldAdapter<SharedNested>("str0",   EqualsMatcher(expected.str0), (SharedNested actual)=>actual.str0)
-//                }, DefaultDescriptor(), strategy);
-//                
-//        // SharedNested
-//        doTest(SharedNested("a", "b", 42), matcher(SharedNested("a", "b", 42), FailForMissingAdapter<SharedNested>()), 
-//                false, "cannot convert MethodHandle(ObjectMatcherTester,String,String,long)SharedNested to (String,String,long)ObjectA RuntimeException occured while getting expected type declaration. Note that ObjectMatcher with FailForMissingAdapter strategy only supports top-level shared classes (Ceylon current limitation).In this case, consider using IgnoreMissingAdapters and defining adapters for all fields.");
-//    }
-//    allSharedNestedLevelTests();
-//}
 
 shared void objectMatcherWithMissingAdaptersTest() {
     ObjectMatcherTester().allSharedTopLevelTests();
