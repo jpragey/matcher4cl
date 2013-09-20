@@ -1,9 +1,7 @@
-import java.lang { arrays, JString = String, JLong = Long, NoSuchFieldException, SecurityException, IllegalArgumentException, IllegalAccessException, NoSuchMethodException, Class, RuntimeException }
 import ceylon.collection { HashSet }
-import java.util { JIterator = Iterator }
-import java.lang.reflect { InvocationTargetException }
-import ceylon.language.model { type, Attribute/*, Value*/, Type, Value, Function, Method }
-import ceylon.language.model.declaration { ClassDeclaration, ValueDeclaration, FunctionDeclaration }
+import ceylon.language.meta{ type }
+import ceylon.language.meta.model { Attribute }
+import ceylon.language.meta.declaration { ClassDeclaration, ValueDeclaration }
 
 
 "Result of a [[Matcher]] match.
@@ -182,7 +180,6 @@ shared class StringMatcher(
                 if(actString.size != expString.size) {
                     sizeDifferDescription = StringDescription(" Sizes: actual=``actString.size`` != expected=``expString.size``"); 
                 } 
-//                else {
                 Iterator<Character> expIt = expString.iterator();
                 Iterator<Character> actIt = actString.iterator();
                 variable Integer index = 0;
@@ -437,16 +434,11 @@ shared class MapMatcher<Key, Item>(
                 }
                 
                 MatchDescription md = MatchDescription(prefix, matchStyle(matched), expectedItem, actualItem, descriptor);
-                
-                Description fd;
-                if(!matched) {
-                    fd = TreeDescription(md, {
+
+                Description fd = (matched) then md else TreeDescription(md, {
                         StringDescription("Cause:"), 
                         mr.matchDescription
                     });
-                } else {
-                    fd = md;
-                }
                 
                 MapEntryDescription med = MapEntryDescription(ValueDescription(normalStyle, key, descriptor), fd);
                 
@@ -516,16 +508,8 @@ shared class FieldAdapterForDeclaration<T>(
         given T satisfies Object
 {
     shared MatcherResult match(T actual, Matcher (Object? ) matcherResolver) {
-        try {
-            Object? actualField = field(actual);
-            return matcher.match(actualField, matcherResolver);
-            
-        } catch (NoSuchFieldException | SecurityException | IllegalArgumentException | IllegalAccessException 
-                | NoSuchMethodException | InvocationTargetException e) {
-            value descr = StringDescription("an ``className(e)`` occured while accessing field ``attribute.name`` of ``className(actual)`` : ``e.message``", highlighted);
-            return MatcherResult(false, descr);
-        }
-        
+        Object? actualField = field(actual);
+        return matcher.match(actualField, matcherResolver);
     }
 }
 
@@ -589,20 +573,9 @@ shared class FailForMissingAdapter<T>() extends MissingAdapterStrategy<T>() give
     "Check if all `expected` fields have an adapter in `fieldAdapters` with the same name.
      If not, returns an error Description."
     shared actual Description | {FieldAdapterForDeclaration<T> *} createMissingAdapters(T expected, {FieldAdapterForDeclaration<T> *} fieldAdapters, Matcher (Object? ) matcherResolver) {
-        //HashSet<String> adaptersFieldNames = HashSet<String>
-        //    (fieldAdapters.map((FieldAdapter<T> fa) => fa.attribute.declaration.name));
 
         value t = type(expected);
-        ClassDeclaration classDeclaration;
-        try {
-            classDeclaration = t.declaration;
-        } catch (RuntimeException e) {
-            return TreeDescription(StringDescription(e.message), [ 
-                StringDescription("A RuntimeException occured while getting expected type declaration. "),
-                StringDescription("Note that ObjectMatcher with FailForMissingAdapter strategy only supports top-level classes (Ceylon current limitation)."),
-                StringDescription("In this case, consider using IgnoreMissingAdapters and defining adapters for all fields.")
-            ]);
-        }
+        ClassDeclaration classDeclaration = t.declaration;
     
         ValueDeclaration[] attrs = classDeclaration.memberDeclarations<ValueDeclaration>();
         Set<ValueDeclaration> objectFieldNames = HashSet(attrs);
@@ -637,16 +610,7 @@ shared class CreateMissingAdapters<T>() extends MissingAdapterStrategy<T>() give
         
         // Get a ClassDeclaration for expected object.
         value t = type(expected);
-        ClassDeclaration classDeclaration;
-        try {
-            classDeclaration = t.declaration;
-        } catch (RuntimeException e) {
-            return TreeDescription(StringDescription(e.message), [ 
-                StringDescription("A RuntimeException occured while getting expected type declaration. "),
-                StringDescription("Note that ObjectMatcher with CreateMissingAdapters strategy only supports top-level shared classes (Ceylon current limitation)."),
-                StringDescription("In this case, consider using IgnoreMissingAdapters and defining adapters for all fields.")
-            ]);
-        }
+        ClassDeclaration classDeclaration = t.declaration;
         
         ValueDeclaration[] attrs = classDeclaration.memberDeclarations<ValueDeclaration>();
         Set<ValueDeclaration> objectFieldNames = HashSet(attrs);
@@ -668,21 +632,12 @@ shared class CreateMissingAdapters<T>() extends MissingAdapterStrategy<T>() give
             
             for(valueDecl in definedButNotChecked) {
                 
-                Object? extractor(Object act)  {
-                    Value<Anything> attr = valueDecl.apply(act); 
+                Object? extractor(T act)  {
+                    //Value<Anything> attr = valueDecl.apply(act); 
+                    value attr = valueDecl.memberApply<T>(`T`)(act); 
                     return attr.get() else null;
                 }
-                Object? expectedField;
-                try {
-                    expectedField = valueDecl.apply(expected).get() else null;
-                } catch (RuntimeException e) {
-                    return TreeDescription(StringDescription(e.message), [ 
-                    StringDescription("A RuntimeException occured while getting field ``valueDecl.name`` of expected object of type ``classDeclaration.name``. "),
-                        StringDescription("Note that ObjectMatcher with CreateMissingAdapters strategy only supports top-level shared classes (Ceylon current limitation)."),
-                        StringDescription("In this case, consider using IgnoreMissingAdapters and defining adapters for all fields.")
-                    ]);
-                    
-                }
+                Object? expectedField = valueDecl.memberApply<T>(`T`)(expected).get() else null;
                 
                 FieldAdapterForDeclaration<T> ab = FieldAdapterForDeclaration<T>(valueDecl, matcherResolver(expectedField),  extractor);
                 missingAdaptersBuilder.append(ab);

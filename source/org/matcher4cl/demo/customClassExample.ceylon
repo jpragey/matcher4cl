@@ -4,7 +4,7 @@ import org.matcher4cl.core { assertThat, FieldAdapter, EqualsMatcher, ObjectMatc
 
 void customClassTest() {
     // Class under test
-    class User(shared String name, shared Integer age) {}
+//    class User(shared String name, shared Integer age) {}
     // Our custom matcher
     class UserMatcher(User expected) extends ObjectMatcher<User>(expected, {
         FieldAdapter<User>(`User.name`, EqualsMatcher(expected.name)/*, (User actual)=>actual.name*/),
