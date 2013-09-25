@@ -25,11 +25,7 @@ Matcher4cl needs ceylon 0.6 (currently in github).
 Status
 ======
 
-Matcher4cl is still in an 'everything can (if necessary) change' status, like Ceylon itself:
-
- - Ceylon has a few features under developpment (metaprogramming, annotations) that may impact Matcher4cl;
- - Matcher4cl is young.
-  
+Matcher4cl is still in an 'everything can (but only if necessary) change' status.
 I expect to stabilize it roughly when Ceylon 1.0 is out.
 
 Licence
@@ -46,11 +42,14 @@ Installation
 
     cd matcher4cl/
     # With ant: 
-    ant clean publish
+    ant clean doc publish
     
     # Without ant: 
     ceylon compile org.matcher4cl.{core,demo,test}
     ceylon doc org.matcher4cl.{core,demo,test}
+    mkdir -p ~/.ceylon/repo/org/matcher4cl
+    cp -R ./modules/org/matcher4cl/core ~/.ceylon/repo/org/matcher4cl/
+    
 
 The doc is in modules/org/matcher4cl/core/0.1.0/module-doc/index.html
 
