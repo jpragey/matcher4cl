@@ -28,11 +28,6 @@
      The result is:
          <<<Country>>> {capital: (\"New York\"/<<<\"New york\">>>: expected[4]='Y'(89=#59) != actual[4]='y'(121=#79)), name: (\"USA\")}
 
-     
-     
-     
-     
-     
           
      What if you need to compare more complex structures (eg maps of lists containing custom objects)? Well, you need a bit of infrastructure:
      
@@ -40,8 +35,8 @@
          ... }
 
          // Our custom classes
-    	 shared class City(shared String name) {}
-    	 shared class Country(shared String name, shared String capital, shared {City *} cities={}) {}
+         shared class City(shared String name) {}
+         shared class Country(shared String name, shared String capital, shared {City *} cities={}) {}
 
          // -- Infrastructure: a Descriptor converts custom objects to strings, for displaying purpose only.
          // Not needed for custom classes that have a suitable \`string\` property.
@@ -280,8 +275,7 @@
                         
      If you need to customize field matching, add explicitely field adapters:
      
-    	 void customClassTest() {
-         
+         void customClassTest() {
             // Our custom matcher, with explicit field adapters
             class UserMatcher(User expected) extends ObjectMatcher<User>(expected, {
                 FieldAdapter<User>(`User.name`, EqualsMatcher(expected.name)),
@@ -296,28 +290,9 @@
      This works well because [[ObjectMatcher]] uses a [[CreateMissingAdapters]] as [[MissingAdapterStrategy]] by default, wich tries 
      to creates field adapters by reflection. Reflexion works well with top-level classes; for nested classes, 
      or for field matching customization, you may need other [[MissingAdapterStrategy]]:
-     - [[FailForMissingAdapter]]: all fields must have an FieldAdapter, matching fails otherwise; 
+     - [[FailForMissingAdapter]]: all fields must have an explicit FieldAdapter, matching fails otherwise; 
      - [[IgnoreMissingAdapters]]: doesn't care about missing FieldAdapter(s);
-     - [[CreateMissingAdapters]] (default).
-     
-     Currently [[CreateMissingAdapters]] works only for top-level classes (shared and non-shared); for other classes, use [[IgnoreMissingAdapters]] 
-     (and check the field adapter list is synced with the class). So for a local class:
-     
-         void customClassTest() {
-            // Class under test
-            class User(shared String name, shared Integer age) {}
-            // Our custom matcher
-            class UserMatcher(User expected) extends ObjectMatcher<User>(expected, {
-                FieldAdapter<User>(\"name\", EqualsMatcher(expected.name), (User actual)=>actual.name),
-                FieldAdapter<User>(\"age\", EqualsMatcher(expected.age), (User actual)=>actual.age)
-            }, 
-            DefaultDescriptor(),            // Descriptor: see later 
-            IgnoreMissingAdapters<User>()   // This one works with nested classes
-            ) {}
-            // The test
-            assertThat(User(\"Ted\", 30), UserMatcher(User(\"John\", 20)));
-         }
-
+     - [[CreateMissingAdapters]] creates field adapters by reflection (default).
        
      
      # Resolvers
@@ -362,9 +337,9 @@
      Result:
             1 mismatched: {
               <<<At position 0 >>>ObjectMatcher: <<<org.matcher4cl.mytest.User>>> {
+                age: ('=='20/<<<30>>>), 
                 name: (\"John\"/<<<\"Ted\">>> Sizes: actual=3 != expected=4
-                    : expected[0]='J'(74=#4a) != actual[0]='T'(84=#54)), 
-                age: ('=='20/<<<30>>>)
+                    : expected[0]='J'(74=#4a) != actual[0]='T'(84=#54))
               }
             }
      
@@ -453,7 +428,7 @@
      
          // Convert an error tree to a TreeDescription.
          Description describeErrorTree(Error error) {
-            Description d = StringDescription(normalStyle, error.msg);
+         Description d = StringDescription(error.msg, normalStyle);
             if(error.causes.empty) {
                 return d;
             } else {
@@ -586,7 +561,7 @@
      - text: highlighted errors will be enclosed in a <span> with an \"error\" CSS style; '<', '>' and '&' will be escaped;
      - new line/indent will use `<br/>` and `&nbsp;`
 
-            class HtmlDescrWriter() satisfies DescrWriter {
+             class HtmlDescrWriter() satisfies DescrWriter {
              
                shared actual void writeNewLineIndent(StringBuilder stringBuilder, Integer indentCount) {
                    stringBuilder.append(\"<br/>\");
@@ -616,7 +591,7 @@
                         escape(stringBuilder, text);
                     }
                 }
-            }
+             }
 
 
      Now we need a method to convert a Description to a file:
@@ -630,10 +605,10 @@
                 File file = loc.createFile();
                 Writer writer = file.writer();
                 writer.write(\"<html><head>
-                            <style type=\\\"text/css\\\">
+                             <style type=\\\"text/css\\\">
                                    .error {background-color:#FF183e;}
-                            </style>
-                            </head><body>\");
+                             </style>
+                             </head><body>\");
                 writer.write(\"<h1>Example report</h1>\");
                 
                 // write description

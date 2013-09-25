@@ -51,7 +51,14 @@
         </ceylon-compile>
         <ceylon-run module="org.matcher4cl.test/0.1.0"/>
     </target>
-	
+    
+    <target name="test-js" depends="compile-js" description="Test javascript version">
+        <ceylon-compile encoding="${source.encoding}" src="source">
+            <module name="org.matcher4cl.test"/>
+        </ceylon-compile>
+        <ceylon-run-js module="org.matcher4cl.test/0.1.0"/>
+    </target>
+    
     <target name="clean" description="">
         <delete dir="modules"/>
     </target>

@@ -1,6 +1,5 @@
 import ceylon.test { assertTrue, assertFalse, assertEquals, TestRunner, PrintingTestListener, fail }
 import org.matcher4cl.core{ EqualsMatcher, ListMatcher, MapMatcher, ObjectMatcher, FieldAdapter, Is, AllMatcher, AnyMatcher, NotMatcher, TypeMatcher, DescribedAsMatcher, StringDescription, normalStyle, AnythingMatcher, NotNullMatcher, IdentifiableMatcher, EqualsOpMatcher, DefaultDescriptor, Descriptor, highlighted, StringMatcher, MissingAdapterStrategy, FailForMissingAdapter, IgnoreMissingAdapters, CreateMissingAdapters }
-import java.lang { ClassCastException }
 
 void equalsMatcherTest() {
     
