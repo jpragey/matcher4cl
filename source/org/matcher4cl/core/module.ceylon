@@ -703,6 +703,6 @@
 by ("Jean-Pierre Ragey")
 license ("Apache Software License V2.0") 
 module org.matcher4cl.core '0.1.0' {
-    import ceylon.test '0.6';
-    import ceylon.collection '0.6';
+    import ceylon.test '1.0.0';
+    import ceylon.collection '1.0.0';
 }
