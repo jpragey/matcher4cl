@@ -1,7 +1,7 @@
-import ceylon.test { assertTrue, assertFalse, assertEquals, TestRunner, PrintingTestListener, fail }
-import org.matcher4cl.core{ EqualsMatcher, ListMatcher, MapMatcher, ObjectMatcher, FieldAdapter, Is, AllMatcher, AnyMatcher, NotMatcher, TypeMatcher, DescribedAsMatcher, StringDescription, normalStyle, AnythingMatcher, NotNullMatcher, IdentifiableMatcher, EqualsOpMatcher, DefaultDescriptor, Descriptor, highlighted, StringMatcher, MissingAdapterStrategy, FailForMissingAdapter, IgnoreMissingAdapters, CreateMissingAdapters }
+import ceylon.test { assertTrue, assertFalse, assertEquals, TestRunner, fail, createTestRunner, TestListener, TestResult, failure, error, TestDescription, test }
+import org.matcher4cl.core{ EqualsMatcher, ListMatcher, MapMatcher, ObjectMatcher, FieldAdapter, Is, AllMatcher, AnyMatcher, NotMatcher, TypeMatcher, DescribedAsMatcher, StringDescription, normalStyle, AnythingMatcher, NotNullMatcher, IdentifiableMatcher, EqualsOpMatcher, DefaultDescriptor, Descriptor, highlighted, StringMatcher, MissingAdapterStrategy, FailForMissingAdapter, IgnoreMissingAdapters, CreateMissingAdapters, Description, DescriptorEnv }
 
-void equalsMatcherTest() {
+test void equalsMatcherTest() {
     
     assertTrue(EqualsMatcher(null /*expected*/).match(null).succeeded);
 
@@ -17,7 +17,7 @@ void equalsMatcherTest() {
 }
 
 
-void listMatcherTest() {
+test void listMatcherTest() {
     assertTrue(ListMatcher([10, 11, 12]).match([10, 11, 12]).succeeded);
     assertEquals("{10, 11, 12}", dToS(ListMatcher([10, 11, 12]).match([10, 11, 12]).matchDescription));
     
@@ -66,7 +66,7 @@ void listMatcherTest() {
     assertEquals("Actual list is longer than expected: 1 expected, 2 actual:  {10} => ERR 1 actual not in expected list:  {<null>}", dToS(ListMatcher([10]).match([10, null]).matchDescription));
 }
 
-void mapMatcherTest() {
+test void mapMatcherTest() {
     assertFalse(MapMatcher(LazyMap{10->100, 11->101, 12->102}).match(null).succeeded);
     assertEquals("<<<A Map was expected, found null>>>", dToS(MapMatcher(LazyMap{10->100, 11->101, 12->102}).match(null).matchDescription));
     
@@ -97,7 +97,7 @@ void mapMatcherTest() {
 shared class AAA(shared String name, shared Integer age) {}
 shared class TestClass0(name, age) {shared String name; shared Integer age;}
 
-void objectMatcherTest() {
+test void objectMatcherTest() {
     TestClass0 expected = TestClass0("John", 20);
     {FieldAdapter<TestClass0> *} aFieldMatchers = {
         FieldAdapter<TestClass0>(`TestClass0.name`, EqualsMatcher(expected.name)),
@@ -217,7 +217,7 @@ shared class ObjectMatcherTester() {
 }
 
 
-shared void objectMatcherWithMissingAdaptersTest() {
+test shared void objectMatcherWithMissingAdaptersTest() {
     ObjectMatcherTester().allSharedTopLevelTests();
     ObjectMatcherTester().allNonSharedTopLevelTests();
     ObjectMatcherTester().allSharedNestedLevelTests();
@@ -225,7 +225,7 @@ shared void objectMatcherWithMissingAdaptersTest() {
 }
 
 
-void allMatcherTest() {
+test void allMatcherTest() {
 
     assertTrue(AllMatcher([]).match(null).succeeded);  // No matcher => success
     assertEquals("All {}", 
@@ -245,7 +245,7 @@ void allMatcherTest() {
 }
 
 
-void anyMatcherTest() {
+test void anyMatcherTest() {
 
     assertFalse(AnyMatcher([]).match(null).succeeded);  // No matcher => fail
     assertEquals("AnyMatcher: no matcher succeeded (0 matchers) {}", 
@@ -264,7 +264,7 @@ void anyMatcherTest() {
         dToS(AnyMatcher([EqualsMatcher(42), EqualsMatcher(43)]).match(42).matchDescription));
 }
 
-void notMatcherTest() {
+test void notMatcherTest() {
     
     assertTrue(NotMatcher(EqualsMatcher(42)).match(null).succeeded);  // No matcher => success
     assertEquals("Not {\"==\": ERR: non-null was expected: 42/<<<<null>>>>}", 
@@ -275,14 +275,14 @@ void notMatcherTest() {
         dToS(NotMatcher(EqualsMatcher(42)).match(42).matchDescription));
 }
 
-void anythingMatcherTest() {
+test void anythingMatcherTest() {
     
     assertTrue(AnythingMatcher().match(null).succeeded);  // No matcher => success
     assertEquals("Anything", 
         dToS(AnythingMatcher().match(null).matchDescription));
 }
 
-void describedAsMatcherTest() {
+test void describedAsMatcherTest() {
     
     assertFalse(DescribedAsMatcher(StringDescription("Response: "), EqualsMatcher(42)).match(null).succeeded);
     assertEquals("Response: ERR: non-null was expected: 42/<<<<null>>>>", 
@@ -297,15 +297,51 @@ class A<T>() {
     shared actual String string = "A";
 }
 
-void typeMatcherTest() {
+
+//interface Descriptor2 {
+//}
+//
+//class DefaultDescriptor2(shared String ? () delegate) /*satisfies Descriptor2*/ {
+//    //shared actual String? describe(Object? obj) {return "";}
+//}
+//
+//void dummyTest() {
+//    DefaultDescriptor2 (() {return  null; });
+//}
+
+test void typeMatcherTest() {
     
     assertTrue(TypeMatcher<String>().match("Hello").succeeded);
     assertEquals("\"Hello\"", 
         dToS(TypeMatcher<String>().match("Hello").matchDescription));
     
+    
+    // -- With descriptor
+    class User(shared String name, shared Integer age){}
+
+    //Descriptor descriptor = DefaultDescriptor((Object? obj, DescriptorEnv env) =>null);
+    Descriptor descriptor = DefaultDescriptor (
+        // delegate, tried first
+        (Object? obj, DescriptorEnv descriptorEnv) {
+            switch(obj)
+            case(is User) {return "User '``obj.name``' age=``obj.age``";}
+            else {return  null;}
+        }
+    );
+
+    assertFalse(TypeMatcher<Integer>().match("Hello").succeeded);
+    assertEquals("ERR: wrong type: expected ceylon.language::String, found org.matcher4cl.test::User: <<<User 'JohnDoe' age=42>>>", 
+        dToS(TypeMatcher<String>(descriptor).match(User("JohnDoe", 42)).matchDescription));
+   
+   
+   
+    
     assertFalse(TypeMatcher<Integer>().match("Hello").succeeded);
     assertEquals("ERR: wrong type: expected ceylon.language::Integer, found ceylon.language::String: <<<\"Hello\">>>", 
         dToS(TypeMatcher<Integer>().match("Hello").matchDescription));
+    //thread "main" java.lang.RuntimeException: ceylon.test.AssertionComparisonException "assertion failed: 
+    //            ERR: wrong type: expected ceylon.language::Integer, found ceylon.language::String: <<<"Hello">>> != 
+    //            ERR: wrong type: expected ceylon.language::Integer, found ceylon.language::String: "<ceylon.language::String>"/"Hello""
     
     assertFalse(TypeMatcher<Integer>().match(null).succeeded);
     assertEquals("ERR: wrong type: expected ceylon.language::Integer, found <null>: <<<<null>>>>", 
@@ -333,9 +369,11 @@ void typeMatcherTest() {
     assertTrue(TypeMatcher<Object>().match(A<Integer>()).succeeded);
     assertEquals("A", 
         dToS(TypeMatcher<Object>().match(A<Integer>()).matchDescription));
+    
+   
 }
 
-void notNullMatcherTest() {
+test void notNullMatcherTest() {
     
     assertTrue(NotNullMatcher().match("Hello").succeeded);
     assertEquals("\"Hello\"", 
@@ -346,7 +384,7 @@ void notNullMatcherTest() {
         dToS(NotNullMatcher().match(null).matchDescription));
 }
 
-void sameInstanceMatcherTest() {
+test void sameInstanceMatcherTest() {
     A<Integer> a0 = A<Integer>();
     A<Integer> a1 = A<Integer>();
      
@@ -367,7 +405,18 @@ void sameInstanceMatcherTest() {
         dToS(IdentifiableMatcher(a0).match(null).matchDescription));
 }
 
-void simpleValuesMatcherTest() {
+// TODO: remove
+Description? approxComparator(Float relativeError)(Float expected, Float actual) {
+    if( (expected * (1-relativeError) <= actual <= expected * (1+relativeError)) ||
+            (actual * (1-relativeError) <= expected <= actual * (1+relativeError))) {
+        return null;
+    } else {
+        // Error message
+        return StringDescription("== within ``relativeError*100``% : ", highlighted);
+    }
+}
+
+test void simpleValuesMatcherTest() {
     class FloatMatcher(
         Float expected,
         Float relativeError, 
@@ -375,16 +424,19 @@ void simpleValuesMatcherTest() {
     
     ) extends EqualsOpMatcher<Float>(
         expected,
-        function (Float expected, Float actual) {
-            // Compare with error margin
-            if( (expected * (1-relativeError) <= actual <= expected * (1+relativeError)) || 
-                (actual * (1-relativeError) <= expected <= actual * (1+relativeError))) {
-                return null;
-            } else {
-                // Error message
-                return StringDescription("== within ``relativeError*100``% : ", highlighted);
-            }
-        },
+        approxComparator(relativeError)
+        // TODO: restore
+        //function (Float expected, Float actual) {
+        //    // Compare with error margin
+        //    if( (expected * (1-relativeError) <= actual <= expected * (1+relativeError)) || 
+        //        (actual * (1-relativeError) <= expected <= actual * (1+relativeError))) {
+        //        return null;
+        //    } else {
+        //        // Error message
+        //        return StringDescription("== within ``relativeError*100``% : ", highlighted);
+        //    }
+        //}
+        ,
         "== within ``expected`` ", 
         descriptor){}
         
@@ -398,7 +450,7 @@ void simpleValuesMatcherTest() {
     
 }
 
-void stringMatcherTest() {
+test void stringMatcherTest() {
         
     assertTrue(StringMatcher("Hello").match("Hello").succeeded);
     assertTrue(StringMatcher("").match("").succeeded);
@@ -441,45 +493,5 @@ void stringMatcherTest() {
     assertTrue(StringMatcher("hello", (String s) => s.uppercased).match("HELLO").succeeded);
     assertTrue(StringMatcher("HELLO", (String s) => s.uppercased).match("hello").succeeded);
    
-}
-
-void matcherTestSuite0() {
-    equalsMatcherTest();
-    listMatcherTest(); 
-    mapMatcherTest();
-    objectMatcherTest();
-    allMatcherTest();
-    anyMatcherTest();
-    notMatcherTest();
-    anythingMatcherTest();
-    describedAsMatcherTest();
-    typeMatcherTest();
-    sameInstanceMatcherTest();
-    simpleValuesMatcherTest();
-    stringMatcherTest();
-}
-
-void matcherTestSuite() {
-    TestRunner testRunner = TestRunner();
-    testRunner.addTestListener(PrintingTestListener());
-
-    testRunner.addTest("org.jpr.matchers.core.equalsMatcherTest", equalsMatcherTest);
-    testRunner.addTest("org.jpr.matchers.core.listMatcherTest", listMatcherTest); 
-    testRunner.addTest("org.jpr.matchers.core.mapMatcherTest", mapMatcherTest);
-    testRunner.addTest("org.jpr.matchers.core.objectMatcherTest", objectMatcherTest);
-    testRunner.addTest("org.jpr.matchers.core.objectMatcherWithMissingAdaptersTest", objectMatcherWithMissingAdaptersTest);
-    testRunner.addTest("org.jpr.matchers.core.allMatcherTest", allMatcherTest);
-    testRunner.addTest("org.jpr.matchers.core.anyMatcherTest", anyMatcherTest);
-    testRunner.addTest("org.jpr.matchers.core.notMatcherTest", notMatcherTest);
-    testRunner.addTest("org.jpr.matchers.core.anythingMatcherTest", anythingMatcherTest);
-    testRunner.addTest("org.jpr.matchers.core.describedAsMatcherTest", describedAsMatcherTest);
-    testRunner.addTest("org.jpr.matchers.core.typeMatcherTest", typeMatcherTest);
-    testRunner.addTest("org.jpr.matchers.core.sameInstanceMatcherTest", sameInstanceMatcherTest);
-    testRunner.addTest("org.jpr.matchers.core.notNullMatcherTest", notNullMatcherTest);
-    testRunner.addTest("org.jpr.matchers.core.simpleValuesMatcherTest", simpleValuesMatcherTest);
-    testRunner.addTest("org.jpr.matchers.core.stringMatcherTest", stringMatcherTest);
-    
-    testRunner.run();
-    
 }
 

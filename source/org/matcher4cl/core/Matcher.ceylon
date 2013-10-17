@@ -941,10 +941,20 @@ shared class TypeMatcher<T> (
         } else {
             String actClassName = (actual exists) then type(actual).string else "<null>";
             
-            result = MatcherResult(false, CatDescription{
+            //Description d0 = MatchDescription(
+            //    StringDescription("ERR: wrong type: expected `` `T` ``, found ``actClassName``: ", normalStyle), 
+            //    normalStyle, "<``actClassName``>", actual, descriptor);
+            
+            Description d = CatDescription{
                 StringDescription("ERR: wrong type: expected `` `T` ``, found ``actClassName``: ", normalStyle), 
                 ValueDescription(highlighted, actual, descriptor)
-            });
+            };
+            
+            result = MatcherResult(false, d);
+//result = MatcherResult(false, CatDescription{
+//    StringDescription("ERR: wrong type: expected `` `T` ``, found ``actClassName``: ", normalStyle), 
+//    ValueDescription(highlighted, actual, descriptor)
+//});
         }
         return result;
     }

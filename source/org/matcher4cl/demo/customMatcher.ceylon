@@ -1,5 +1,18 @@
-import org.matcher4cl.core{ Descriptor, DefaultDescriptor, EqualsOpMatcher, highlighted, assertThat, StringDescription }
+import org.matcher4cl.core{ Descriptor, DefaultDescriptor, EqualsOpMatcher, highlighted, assertThat, StringDescription, Description }
 import java.lang { Math {pi = \iPI}}
+
+
+// TODO: remove
+Description? approxComparator(Float relativeError)(Float expected, Float actual) {
+    if( (expected * (1-relativeError) <= actual <= expected * (1+relativeError)) ||
+            (actual * (1-relativeError) <= expected <= actual * (1+relativeError))) {
+        return null;
+    } else {
+        // Error message
+        return StringDescription("== within ``relativeError*100``% : ", highlighted);
+    }
+}
+
 
 class FloatMatcher(
        Float expected,
@@ -8,17 +21,21 @@ class FloatMatcher(
  
    ) extends EqualsOpMatcher<Float>(
        expected,
-       // Inline comparison function
-       function (Float expected, Float actual) {
-           // Compare with error margin
-           if( (expected * (1-relativeError) <= actual <= expected * (1+relativeError)) ||
-               (actual * (1-relativeError) <= expected <= actual * (1+relativeError))) {
-               return null;
-           } else {
-               // Error message
-               return StringDescription("== within ``relativeError*100``% : ", highlighted);
-           }
-       },
+       
+       // TODO: restore inline function, once ceylon-compiler#1365 is fixed
+       approxComparator(relativeError)
+       //// Inline comparison function
+       //function (Float expected, Float actual) {
+       //    // Compare with error margin
+       //    if( (expected * (1-relativeError) <= actual <= expected * (1+relativeError)) ||
+       //        (actual * (1-relativeError) <= expected <= actual * (1+relativeError))) {
+       //        return null;
+       //    } else {
+       //        // Error message
+       //        return StringDescription("== within ``relativeError*100``% : ", highlighted);
+       //    }
+       //}
+       ,
        //
        "== within ``relativeError*100``% ",
        descriptor){}

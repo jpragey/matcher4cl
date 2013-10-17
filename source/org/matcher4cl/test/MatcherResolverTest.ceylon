@@ -1,8 +1,8 @@
-import ceylon.test { assertEquals, TestRunner, PrintingTestListener }
+import ceylon.test { assertEquals, TestRunner, createTestRunner, test }
 import org.matcher4cl.core { defaultResolver }
 
 
-void matcherResolverTest() {
+test void matcherResolverTest() {
     String matcherClassName(Object? obj) {
         value mr = defaultResolver();
         return className(mr(obj));
@@ -17,13 +17,3 @@ void matcherResolverTest() {
     assertEquals("org.matcher4cl.core.MapMatcher", matcherClassName({""->""}));
 }
 
-
-
-void matcherResolverTestSuite() {
-    TestRunner testRunner = TestRunner();
-    testRunner.addTestListener(PrintingTestListener());
-
-    testRunner.addTest("org.matcher4cl.core::matcherResolverTest", matcherResolverTest);
-    
-    testRunner.run();
-}

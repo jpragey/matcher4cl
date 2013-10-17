@@ -1,4 +1,4 @@
-import ceylon.test { assertEquals }
+import ceylon.test { assertEquals, test }
 import org.matcher4cl.core{ ListDescription, Description, DescrWriter, SimpleDescrWriter, ValueDescription, normalStyle, highlighted, MatchDescription, MapDescription, MapEntryDescription, StringDescription, ObjectFieldDescription, ObjectDescription, DescriptorEnv, DefaultDescriptorEnv }
 
 
@@ -11,7 +11,7 @@ String dToS(Description description, DescrWriter descriptionWriter = SimpleDescr
 }
 
 "ValueDescription test."
-void valueDescriptionTest() {
+test void valueDescriptionTest() {
  
     assertEquals("\"hello\"", dToS(ValueDescription(normalStyle, "hello")));
     assertEquals("<<<\"hello\">>>", dToS(ValueDescription(highlighted, "hello")));
@@ -24,7 +24,7 @@ void valueDescriptionTest() {
 }
 
 "ValueDescription test."
-void matchDescriptionTest() {
+test void matchDescriptionTest() {
 
     assertEquals("43/<<<42>>>", dToS(MatchDescription(null, highlighted /*matched*/, 43 /*Object? actualObj*/, 42/*Object? expectedObj*/)));
     assertEquals("42/<<<42>>>", dToS(MatchDescription(null, highlighted /*matched*/, 42 /*Object? actualObj*/, 42/*Object? expectedObj*/)));
@@ -40,7 +40,7 @@ void matchDescriptionTest() {
 
 
 "ListDescription test."
-void listDescriptionTest() {
+test void listDescriptionTest() {
     assertEquals("{43/<<<42>>>, 1.999/2, 2}", dToS(ListDescription(null /*failure*/, [
         MatchDescription(null, highlighted , 43, 42), MatchDescription(null, normalStyle, 1.999, 2), MatchDescription(null, normalStyle, 2, 2)])));
     
@@ -123,14 +123,14 @@ void listDescriptionTest_Tmp() {
 }
 
 "FormattedDescription test."
-void mapEntryDescriptionTest() {
+test void mapEntryDescriptionTest() {
     assertEquals("\"hello\"->43/<<<42>>>", dToS(MapEntryDescription(
         ValueDescription(normalStyle, "hello"), 
         MatchDescription(null, highlighted , 43, 42))));
 }
 
 "ListDescription test."
-void mapDescriptionTest() {
+test void mapDescriptionTest() {
     
     assertEquals("{\"k0\"->42, \"k1\"->43, \"k2\"->44}", dToS(MapDescription(null /*failure*/, [
         MapEntryDescription(ValueDescription(normalStyle /*errorStyle*/, "k0"), MatchDescription(null, normalStyle , 42, 42)),
@@ -191,14 +191,14 @@ void mapDescriptionTest() {
 }
 
 "FormattedDescription test."
-void objectFieldDescriptionTest() {
+test void objectFieldDescriptionTest() {
     assertEquals("field: (43/<<<42>>>)", dToS(ObjectFieldDescription(
         "field", 
         MatchDescription(null, highlighted , 43, 42))));
 }
 
 "ObjectDescription test."
-void objectDescriptionTest() {
+test void objectDescriptionTest() {
     assertEquals("ERR: MyClass field mismatch:  {field0: (42), field1: (43/<<<42>>>)}", dToS(
     ObjectDescription(
         StringDescription("ERR: MyClass field mismatch: "),
@@ -206,16 +206,5 @@ void objectDescriptionTest() {
             ObjectFieldDescription("field0", MatchDescription(null, normalStyle , 42, 42)),
             ObjectFieldDescription("field1", MatchDescription(null, highlighted, 43, 42))
         ])));
-}
-
-void descriptionTestSuite() {
-    
-    valueDescriptionTest() ;
-    matchDescriptionTest(); 
-    listDescriptionTest(); 
-    mapEntryDescriptionTest(); 
-    mapDescriptionTest(); 
-    objectFieldDescriptionTest(); 
-    objectDescriptionTest();
 }
 
