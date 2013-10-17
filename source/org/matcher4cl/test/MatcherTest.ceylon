@@ -1,5 +1,5 @@
 import ceylon.test { assertTrue, assertFalse, assertEquals, TestRunner, fail, createTestRunner, TestListener, TestResult, failure, error, TestDescription, test }
-import org.matcher4cl.core{ EqualsMatcher, ListMatcher, MapMatcher, ObjectMatcher, FieldAdapter, Is, AllMatcher, AnyMatcher, NotMatcher, TypeMatcher, DescribedAsMatcher, StringDescription, normalStyle, AnythingMatcher, NotNullMatcher, IdentifiableMatcher, EqualsOpMatcher, DefaultDescriptor, Descriptor, highlighted, StringMatcher, MissingAdapterStrategy, FailForMissingAdapter, IgnoreMissingAdapters, CreateMissingAdapters, Description, DescriptorEnv }
+import org.matcher4cl.core{ EqualsMatcher, ListMatcher, MapMatcher, ObjectMatcher, FieldAdapter, Is, AllMatcher, AnyMatcher, NotMatcher, TypeMatcher, DescribedAsMatcher, StringDescription, normalStyle, AnythingMatcher, NotNullMatcher, IdentifiableMatcher, EqualsOpMatcher, DefaultDescriptor, Descriptor, highlighted, StringMatcher, MissingAdapterStrategy, FailForMissingAdapter, IgnoreMissingAdapters, CreateMissingAdapters, Description, DescriptorEnv, TreeDescription, FootNote, DefaultDescriptorEnv, SimpleDescrWriter }
 
 test void equalsMatcherTest() {
     
@@ -297,17 +297,53 @@ class A<T>() {
     shared actual String string = "A";
 }
 
+class MessageNode(shared String message, shared {MessageNode*} children = {}) {}
 
-//interface Descriptor2 {
-//}
-//
-//class DefaultDescriptor2(shared String ? () delegate) /*satisfies Descriptor2*/ {
-//    //shared actual String? describe(Object? obj) {return "";}
-//}
-//
-//void dummyTest() {
-//    DefaultDescriptor2 (() {return  null; });
-//}
+test void typeMatcherWithDescriptorTest() {
+    // -- With descriptor
+    class User(shared String name, shared Integer age){}
+    Description messageNodeDescription(MessageNode node, String indent = "") {
+        return TreeDescription(StringDescription(node.message), {for(n in node.children) messageNodeDescription(n, indent + "  ")}) ;
+    }
+    Descriptor descriptor = DefaultDescriptor (
+        // delegate, tried first
+        (Object? obj, DescriptorEnv descriptorEnv) {
+            switch(obj)
+            case(is User) {return "User '``obj.name``' age=``obj.age``";}
+            case(is MessageNode) {
+                FootNote footNote = descriptorEnv.newFootNote(messageNodeDescription(obj));
+                return "MessageNode error, see [``footNote.reference``]";
+            }
+            else {return  null;}
+        }
+    );
+    
+    // -- Description without footnote
+    assertFalse(TypeMatcher<Integer>().match("Hello").succeeded);
+    assertEquals("ERR: wrong type: expected ceylon.language::String, found org.matcher4cl.test::User: <<<User 'JohnDoe' age=42>>>", 
+    dToS(TypeMatcher<String>(descriptor).match(User("JohnDoe", 42)).matchDescription));
+    
+    // -- Description with footnote
+    Description messageNodesDescr = TypeMatcher<String>(descriptor).match( MessageNode("msg0", {MessageNode("msg1"), MessageNode("msg2")}) ).matchDescription;
+    StringBuilder messageNodesSb = StringBuilder();
+    DefaultDescriptorEnv descriptorEnv = DefaultDescriptorEnv();
+    messageNodesDescr.appendTo(messageNodesSb, SimpleDescrWriter(false /*multiLine*/), 0, descriptorEnv);
+    
+    // Simple message
+    assertEquals("ERR: wrong type: expected ceylon.language::String, found org.matcher4cl.test::MessageNode: <<<MessageNode error, see [0]>>>", 
+    messageNodesSb.string);
+    
+    // Footnote
+    assertEquals(descriptorEnv.footNotes().size, 1);
+    assert (exists FootNote footNote = descriptorEnv.footNotes().sequence[0]);
+    StringBuilder footnoteSb = StringBuilder();  
+    footNote.description.appendTo(footnoteSb, SimpleDescrWriter(true /*multiLine*/), 0, DefaultDescriptorEnv()/*unused*/);
+    
+    assertEquals("""msg0
+                        msg1
+                        msg2""",
+        footnoteSb.string);
+}
 
 test void typeMatcherTest() {
     
@@ -316,32 +352,9 @@ test void typeMatcherTest() {
         dToS(TypeMatcher<String>().match("Hello").matchDescription));
     
     
-    // -- With descriptor
-    class User(shared String name, shared Integer age){}
-
-    //Descriptor descriptor = DefaultDescriptor((Object? obj, DescriptorEnv env) =>null);
-    Descriptor descriptor = DefaultDescriptor (
-        // delegate, tried first
-        (Object? obj, DescriptorEnv descriptorEnv) {
-            switch(obj)
-            case(is User) {return "User '``obj.name``' age=``obj.age``";}
-            else {return  null;}
-        }
-    );
-
-    assertFalse(TypeMatcher<Integer>().match("Hello").succeeded);
-    assertEquals("ERR: wrong type: expected ceylon.language::String, found org.matcher4cl.test::User: <<<User 'JohnDoe' age=42>>>", 
-        dToS(TypeMatcher<String>(descriptor).match(User("JohnDoe", 42)).matchDescription));
-   
-   
-   
-    
     assertFalse(TypeMatcher<Integer>().match("Hello").succeeded);
     assertEquals("ERR: wrong type: expected ceylon.language::Integer, found ceylon.language::String: <<<\"Hello\">>>", 
         dToS(TypeMatcher<Integer>().match("Hello").matchDescription));
-    //thread "main" java.lang.RuntimeException: ceylon.test.AssertionComparisonException "assertion failed: 
-    //            ERR: wrong type: expected ceylon.language::Integer, found ceylon.language::String: <<<"Hello">>> != 
-    //            ERR: wrong type: expected ceylon.language::Integer, found ceylon.language::String: "<ceylon.language::String>"/"Hello""
     
     assertFalse(TypeMatcher<Integer>().match(null).succeeded);
     assertEquals("ERR: wrong type: expected ceylon.language::Integer, found <null>: <<<<null>>>>", 
