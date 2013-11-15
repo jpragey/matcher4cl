@@ -11,6 +11,14 @@
     <property name="ceylon.ant.lib" value="${ceylon.home}/lib/ceylon-ant.jar"/>
     <property name="source.encoding" value="UTF-8"/>
 
+	
+    <property name="build.src" location="build/source"/>
+    <property name="build.testsrc" location="build/testSource"/>
+	
+    <property name="module.core" value="org.matcher4cl.core"/>
+    <property name="module.version" value="0.1.0"/>
+	
+	
     <property name="out.repo" location="modules"/>
 
         <!-- Local repository -->
@@ -26,49 +34,116 @@
     <target name="default" depends="doc, compile">
     </target>
 
-    <target name="compile" depends="ceylon-ant-taskdefs" description="">
-        <ceylon-compile encoding="${source.encoding}">
-            <module name="org.matcher4cl.core"/>
-        </ceylon-compile>
+	
+   <target name="compile.copysrc" description="Copy application source files to build/src/ (for compilation)">
+        <!-- Copy app files to build/src, excluding module.ceylon -->
+        <copy todir="${build.src}">
+            <fileset dir="source">
+                <patternset>
+                    <include name="**/*"/>
+                    <exclude name="**/module.ceylon"/>
+                    <exclude name="**/package.ceylon"/>
+                </patternset>
+            </fileset>
+        </copy>
+        <!-- Copy module.ceylon from test dir, but comment out test modules section -->
+        <copy todir="${build.src}" verbose="true">
+             
+            <fileset dir="source">
+                <include name="**/module.ceylon"/>
+                <include name="**/package.ceylon"/>
+            </fileset>
+             
+            <filterchain>
+                <tokenfilter>
+                    <replaceregex pattern="//TEST\{" replace="/*"/>
+                    <replaceregex pattern="//\}TEST" replace="*/"/>
+                </tokenfilter>
+            </filterchain>
+             
+        </copy>
     </target>
 
-    <target name="compile-js" depends="ceylon-ant-taskdefs" description="">
-        <ceylon-compile-js encoding="${source.encoding}">
-            <module name="org.matcher4cl.core"/>
+    <target name="compile" depends="ceylon-ant-taskdefs, compile.copysrc" description="Compile for JVM (module, not tests)">
+        <ceylon-compile encoding="${source.encoding}" src="${build.src}" out="build/modules">
+            <module name="${module.core}"/>
+        </ceylon-compile>
+    </target>
+	
+    <target name="compile-js" depends="ceylon-ant-taskdefs, compile.copysrc" description="Compile for Javascript (module, not tests)">
+        <ceylon-compile-js encoding="${source.encoding}" src="${build.src}" out="build/modules">
+            <module name="${module.core}"/>
         </ceylon-compile-js>
     </target>
 
-    <target name="doc" depends="ceylon-ant-taskdefs" description="">
-        <ceylon-doc encoding="${source.encoding}">
-            <module name="org.matcher4cl.core"/>
+    <target name="doc" depends="ceylon-ant-taskdefs, compile.copysrc" description="Generate module doc">
+        <ceylon-doc encoding="${source.encoding}" src="${build.src}" out="build/modules">
+            <module name="${module.core}"/>
         </ceylon-doc>
     </target>
 
 
+	<target name="test.copysrc" description="Copy source files for tests (to ${build.testsrc})">
+        <!-- Copy app and test source files to ${build.src}; get module.ceylon from tests -->
+        <copy todir="${build.testsrc}">
+            <fileset dir="source">
+                <patternset>
+                    <include name="**/*"/>
+                  </patternset>
+            </fileset>
+        </copy>
+        <copy todir="${build.testsrc}" verbose="true">
+            <fileset dir="testSource">
+                <include name="**/*"/>
+                <exclude name="**/module.ceylon"/>
+                <exclude name="**/package.ceylon"/>
+            </fileset>
+        </copy>
+    </target>
+	
+    <target name="test" depends="ceylon-ant-taskdefs, test.copysrc" description="Compile lib and tests (to build/testmodules) and run tests">
+         
+        <ceylon-compile encoding="${source.encoding}" src="${build.testsrc}" out="build/testmodules">
+            <module name="${module.core}"/>
+        </ceylon-compile>
+         
+        <!-- Run test function org.test4cl.runTests -->
+    	<echo message="method ${module.core}.runTests  module ${module.core}  "></echo>
+        <ceylon-run run="${module.core}.runTests" module="${module.core}/${module.version}">
+            <rep url="build/testmodules"/>
+        </ceylon-run>
+        <!-- TODO
+        <ceylon-run run="org.locale4cl.java.runTests" module="org.locale4cl.java/${appVersion}">
+            <rep url="build/testmodules"/>
+        </ceylon-run>
+        -->
+    </target>
+	
+	
+	<!--
     <target name="test" depends="compile" description="">
         <ceylon-compile encoding="${source.encoding}" src="source">
             <module name="org.matcher4cl.test"/>
         </ceylon-compile>
         <ceylon-run module="org.matcher4cl.test/0.1.0"/>
     </target>
-    
+    -->
     <target name="test-js" depends="compile-js" description="Test javascript version">
         <ceylon-compile encoding="${source.encoding}" src="source">
             <module name="org.matcher4cl.test"/>
         </ceylon-compile>
-        <ceylon-run-js module="org.matcher4cl.test/0.1.0"/>
+        <ceylon-run-js module="org.matcher4cl.test/${module.version}"/>
     </target>
     
     <target name="clean" description="">
         <delete dir="modules"/>
+        <delete dir="build"/>
     </target>
 
-    <target name="publish" depends="compile"
-            description="Copies the module to the user's repository">
+    <target name="publish" depends="compile" description="Copies the module to the user's repository">
         <copy todir="${ceylon.repo.dir}" overwrite="true">
-            <fileset dir="${out.repo}">
+            <fileset dir="build/modules">
                 <include name="org/matcher4cl/core/**"/>
-    
             </fileset>
         </copy>
     </target>
