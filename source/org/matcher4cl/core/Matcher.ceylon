@@ -511,6 +511,7 @@ shared class FieldAdapterForDeclaration<T>(
         Object? actualField = field(actual);
         return matcher.match(actualField, matcherResolver);
     }
+    shared actual String string => "FieldAdapterForDeclaration<`` `T` ``> : attribute `` attribute.name ``";
 }
 
 
@@ -519,14 +520,16 @@ shared class FieldAdapterForDeclaration<T>(
  
  In refinments, you typically only override [[createMissingAdapters]].
  "
-shared abstract class MissingAdapterStrategy<T>() given T satisfies Object {
+shared abstract class MissingAdapterStrategy<T>(
+
+) given T satisfies Object {
 
     "Create [[FieldAdapter]]s for `expected` object fields that don't have one in `fieldAdapters`.
      Override it in MissingAdapterStrategy refinments.
      If OK, returns the created adapters; otherwise returns a [[Description]] of what went wrong (this error description will be considered as a match failure,
      thus will be included in the output messages).
      "
-        shared formal Description | {FieldAdapterForDeclaration<T> *} createMissingAdapters(
+    shared formal Description | {FieldAdapterForDeclaration<T> *} createMissingAdapters(
         "The expected object"
         T expected, 
         "Current (custom) field adapters. You don't need to create an adapter for a field if there's an adapter for this field in this list."
@@ -562,29 +565,43 @@ shared abstract class MissingAdapterStrategy<T>() given T satisfies Object {
     }
 }
 
+{ValueDeclaration *} defaultIgnoredFields<T>() 
+        given T satisfies Object => {
+            `value Identifiable.hash`, 
+            `value T.string`
+        };
+
+
 "[[MissingAdapterStrategy]] that fails if any field adapter is missing: field adapters are mandatory for ALL fields,
  FailForMissingAdapter doesn't create any field adapter at all.
  
  Note that it works only for shared top-level classes and non-shared nested classes (due to current Ceylon metaprogramming limitations). 
  "
 see (`class ObjectMatcher`) 
-shared class FailForMissingAdapter<T>() extends MissingAdapterStrategy<T>() given T satisfies Object {
+shared class FailForMissingAdapter<T>(
+    {ValueDeclaration *} ignoredFields = defaultIgnoredFields<T>()
+) extends MissingAdapterStrategy<T>() given T satisfies Object {
     
     "Check if all `expected` fields have an adapter in `fieldAdapters` with the same name.
      If not, returns an error Description."
     shared actual Description | {FieldAdapterForDeclaration<T> *} createMissingAdapters(T expected, {FieldAdapterForDeclaration<T> *} fieldAdapters, Matcher (Object? ) matcherResolver) {
 
-        value t = type(expected);
-        ClassDeclaration classDeclaration = t.declaration;
+        //value t = type(expected);
+        //ClassDeclaration classDeclaration = t.declaration;
     
-        ValueDeclaration[] attrs = classDeclaration.memberDeclarations<ValueDeclaration>();
-        Set<ValueDeclaration> objectFieldNames = HashSet(attrs);
-        HashSet<ValueDeclaration> adaptersFieldNames = HashSet<ValueDeclaration>
-            (fieldAdapters.map((FieldAdapterForDeclaration<T> fa) => fa.attribute));
+        ValueDeclaration[] attrs = type(expected).declaration.memberDeclarations<ValueDeclaration>();
+        HashSet<ValueDeclaration> objectFieldNames = HashSet(attrs);
         
-        Set<ValueDeclaration> missingFieldNames = objectFieldNames.complement(adaptersFieldNames);
+        HashSet<ValueDeclaration> adaptersFieldDeclarations = HashSet<ValueDeclaration>
+            (fieldAdapters.map((FieldAdapterForDeclaration<T> fa) => fa.attribute));
+        adaptersFieldDeclarations.addAll(ignoredFields);
+        
+        Set<ValueDeclaration> missingFieldNames = objectFieldNames.complement(adaptersFieldDeclarations);
         if(!missingFieldNames.empty) {
-            String msg = "Class field(s) without FieldAdapter: `` ", ".join(missingFieldNames.map((ValueDeclaration elem) => elem.name)) ``";
+            
+            value sortedAttrNames = {for(attr in attrs) if(missingFieldNames.contains(attr)) attr.name};
+            //String msg = "Class field(s) without FieldAdapter: `` ", ".join(missingFieldNames.map((ValueDeclaration elem) => elem.name)) ``";
+            String msg = "Class field(s) without FieldAdapter: `` ", ".join(sortedAttrNames) ``";
             return StringDescription(msg);
         }
         return {};
@@ -594,7 +611,11 @@ shared class FailForMissingAdapter<T>() extends MissingAdapterStrategy<T>() give
  "
 see (`class ObjectMatcher`) 
 shared class IgnoreMissingAdapters<T>() extends MissingAdapterStrategy<T>() given T satisfies Object {
-    shared actual Description | {FieldAdapterForDeclaration<T> *} createMissingAdapters(T expected, {FieldAdapterForDeclaration<T> *} fieldAdapters, Matcher (Object? ) matcherResolver) {
+    shared actual Description | {FieldAdapterForDeclaration<T> *} createMissingAdapters(
+        T expected, 
+        {FieldAdapterForDeclaration<T> *} fieldAdapters, 
+        Matcher (Object? ) matcherResolver) 
+    {
         return {};
     }    
 }
@@ -604,33 +625,60 @@ shared class IgnoreMissingAdapters<T>() extends MissingAdapterStrategy<T>() give
  Note that it works only for shared top-level classes (due to current Ceylon metaprogramming limitations). 
  "
 see (`class ObjectMatcher`) 
-shared class CreateMissingAdapters<T>() extends MissingAdapterStrategy<T>() given T satisfies Object {
-    
-    shared actual Description | {FieldAdapterForDeclaration<T> *} createMissingAdapters(T expected, {FieldAdapterForDeclaration<T> *} fieldAdapters, Matcher (Object? ) matcherResolver) {
+shared class CreateMissingAdapters<T>(
+    {ValueDeclaration *} ignoredFields = defaultIgnoredFields<T>()
+) 
+    extends MissingAdapterStrategy<T>() 
+    given T satisfies Object 
+{
+    //HashSet<ValueDeclaration> ignoredAttributes = HashSet<ValueDeclaration>(ignoredFields);
+    //for(vd in ignoredAttributes) {
+    //    print(" Ignored: ``vd``"); 
+    //}
+            
+    shared actual Description | {FieldAdapterForDeclaration<T> *} createMissingAdapters(
+        T expected, 
+        {FieldAdapterForDeclaration<T> *} fieldAdapters, 
+        Matcher (Object? ) matcherResolver) 
+    {
         
         // Get a ClassDeclaration for expected object.
-        value t = type(expected);
-        ClassDeclaration classDeclaration = t.declaration;
+        //value t = type(expected);
+        //ClassDeclaration classDeclaration = t.declaration;
         
-        ValueDeclaration[] attrs = classDeclaration.memberDeclarations<ValueDeclaration>();
-        Set<ValueDeclaration> objectFieldNames = HashSet(attrs);
+        ValueDeclaration[] expectedAttributes = type(expected).declaration/*classDeclaration*/.memberDeclarations<ValueDeclaration>();
+        HashSet<ValueDeclaration> expectedAttributeSet = HashSet(expectedAttributes);
+        for(fa in fieldAdapters) {
+            expectedAttributeSet.remove(fa.attribute);
+        }
+        for(fa in ignoredFields) {
+            expectedAttributeSet.remove(fa);
+        }
         
-        HashSet<ValueDeclaration> adaptersFieldNames = HashSet<ValueDeclaration>(fieldAdapters.map((FieldAdapterForDeclaration<T> fa) => fa.attribute));
+        HashSet<ValueDeclaration> adaptersAttributeSet = HashSet(fieldAdapters.map((FieldAdapterForDeclaration<T> fa) => fa.attribute));
+        //HashSet<ValueDeclaration> adaptersAttributeSet = HashSet{for(fa in fieldAdapters) fa.attribute};
         
         SequenceBuilder<Description> errBuilder = SequenceBuilder<Description>();
         
-        Set<ValueDeclaration> checkedButUndefined = adaptersFieldNames.complement(objectFieldNames);
-        if(!checkedButUndefined.empty) {
-            String msg = "FieldAdapter(s) without class fields: `` ", ".join(checkedButUndefined.map((ValueDeclaration elem) => elem.name)) ``";
-            errBuilder.append(StringDescription(msg));
-        }
+        //Set<ValueDeclaration> checkedButUndefined = adaptersAttributeSet.complement(expectedAttributeSet);
+        //if(!checkedButUndefined.empty) {
+        //    String msg = "FieldAdapter(s) without class fields: `` ", ".join(checkedButUndefined.map((ValueDeclaration elem) => elem.name)) ``";
+        //    errBuilder.append(StringDescription(msg));
+        //}
         
         SequenceBuilder<FieldAdapterForDeclaration<T>> missingAdaptersBuilder = SequenceBuilder<FieldAdapterForDeclaration<T>>();
 
-        Set<ValueDeclaration> definedButNotChecked = objectFieldNames.complement(adaptersFieldNames);
+        Set<ValueDeclaration> definedButNotChecked = expectedAttributeSet.complement(adaptersAttributeSet);
         if(!definedButNotChecked.empty) {
             
-            for(valueDecl in definedButNotChecked) {
+            for(valueDecl in expectedAttributes /*definedButNotChecked*/) {
+                
+                print("Creating Adapter for attribute ``valueDecl``");
+                
+                if(!expectedAttributeSet.contains(valueDecl)) {
+                    print(" => Attribute ``valueDecl`` in ignored or explicit attributes list, rejecting");
+                    continue;
+                }
                 
                 Object? extractor(T act)  {
                     //Value<Anything> attr = valueDecl.apply(act); 
@@ -645,7 +693,9 @@ shared class CreateMissingAdapters<T>() extends MissingAdapterStrategy<T>() give
         }
         
         if(errBuilder.empty) {
-            return missingAdaptersBuilder.sequence;
+            value result = missingAdaptersBuilder.sequence;
+print("Created missingAdapters: ``result``");             
+            return result;
         } else {
             return TreeDescription(StringDescription("ObjectMatcher<``className(expected)``>: FieldAdapter list and class fields don't match."), 
                         errBuilder.sequence);
@@ -724,7 +774,7 @@ shared class ObjectMatcher<T> (
             SequenceBuilder<ObjectFieldDescription> fieldDescrSb = SequenceBuilder<ObjectFieldDescription>();
             
             for(fieldMatcher in currentFieldAdapters) {
-                
+print("** => Matching field ``fieldMatcher.attribute``");                
                 MatcherResult fieldResult = fieldMatcher.match(actual, matcherResolver);
                 if(fieldResult.failed) {
                     succeeded = false;
