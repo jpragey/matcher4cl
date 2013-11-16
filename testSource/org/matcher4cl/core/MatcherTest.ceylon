@@ -232,12 +232,6 @@ shared class ObjectMatcherTester() {
 }
 
 
-test shared void objectMatcherWithMissingAdaptersTest() {
-    ObjectMatcherTester().allSharedTopLevelTests();
-    ObjectMatcherTester().allNonSharedTopLevelTests();
-    ObjectMatcherTester().allSharedNestedLevelTests();
-    ObjectMatcherTester().allNonSharedNestedLevelTests();
-}
 test void allSharedTopLevelTests() => ObjectMatcherTester().allSharedTopLevelTests();
 test void allNonSharedTopLevelTests() => ObjectMatcherTester().allNonSharedTopLevelTests();
 test void allSharedNestedLevelTests() => ObjectMatcherTester().allSharedNestedLevelTests();
