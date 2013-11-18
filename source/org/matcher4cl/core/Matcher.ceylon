@@ -950,7 +950,7 @@ shared class EitherMatcher (
         MatcherResult mr0 = matcher0.match(actual, matcherResolver);
         MatcherResult mr1 = matcher1.match(actual, matcherResolver);
         
-        Boolean success = (mr0.failed != mr1.succeeded);
+        Boolean success = (mr0.succeeded != mr1.succeeded);
         String successStr(Boolean b) => b then "success" else "failed";
         
         StringDescription rootDescription = success 
