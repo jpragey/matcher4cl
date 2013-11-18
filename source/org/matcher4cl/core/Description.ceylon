@@ -38,6 +38,62 @@ shared class FootNote(
     shared Description description) {
 }
 
+
+shared interface DescriptionText of DescriptionTextLeaf| DescriptionTextNode {
+    shared formal Integer singleLineSize;
+}
+
+
+"Text element, single line (or part of a single line [[DescriptionTextNode]]."
+shared class DescriptionTextLeaf(shared TextStyle textStyle, shared String text) satisfies DescriptionText {
+    shared actual Boolean equals(Object that) {
+        if(is DescriptionTextLeaf that) {
+            return text == that.text && textStyle == that.textStyle;
+        } else {
+            return false;
+        }
+    }
+    
+    shared actual Integer singleLineSize = text.size;
+    
+}
+"May be split on several lines"
+shared class DescriptionTextNode(
+    // TODO: maybe should be a leaf ?
+    shared DescriptionText/*Leaf*/? prefix, 
+    shared [DescriptionText *] children
+    
+) satisfies DescriptionText 
+{
+    shared actual Boolean equals(Object that) {
+        if(is DescriptionTextNode that) {
+            variable Boolean prefixMatch = false;
+            if(exists prefix, exists thatPrefix = that.prefix) {
+                prefixMatch = (prefix == thatPrefix);
+            }
+            if(is Null prefix, is Null t = that.prefix) {
+                prefixMatch = true;
+            }
+            return prefixMatch && children.equals(children);
+        }
+        return false;
+    }
+    
+    variable Integer textSize = 0;
+    if(exists prefix) {
+        textSize = prefix.singleLineSize; 
+    }
+    for(dt in children) {
+        textSize += dt.singleLineSize;
+    }
+    
+    shared actual Integer singleLineSize = textSize;
+    
+}
+
+
+
+
 "Description of match result.
  Descriptions are a tree structure explaining how expected and actual objects differ; they are typically created by [[Matcher]]s.
  Its main method is [[appendTo]], that dump the explanation text(s) to a StringBuilder.
@@ -68,6 +124,8 @@ shared interface Description
         String result = sb.string;
         return result; 
     }
+    
+    shared formal DescriptionText toDescriptionText(DescriptorEnv descriptorEnv);
 }
 
 "Description for 'simple' objects: value is converted to String by a [[Descriptor]]."
@@ -87,7 +145,18 @@ shared class ValueDescription(
     shared actual void appendTo(StringBuilder stringBuilder, DescrWriter descrWriter, Integer depth, DescriptorEnv descriptorEnv) {
         String s = descriptor.describe(val, descriptorEnv);
         descrWriter.writeText(stringBuilder, textStyle, s);
-    } 
+    }
+    
+    //shared actual void visit(DescriptionVisitor visitor) {
+    //    visitor.start(this);
+    //    visitor.end(this);
+    //}
+    
+    shared actual DescriptionText toDescriptionText(DescriptorEnv descriptorEnv) {
+        String s = descriptor.describe(val, descriptorEnv);
+        return DescriptionTextLeaf(textStyle, s);
+    }
+    
 }
 
 "Description consisting in a simple String."
@@ -107,6 +176,14 @@ shared class StringDescription(
     } 
     "Return the value ([val])"
     shared actual String string => val;
+    
+    shared actual DescriptionText toDescriptionText(DescriptorEnv descriptorEnv) {
+        return DescriptionTextLeaf(textStyle, val);
+    }
+    //shared actual void visit(DescriptionVisitor visitor) {
+    //    visitor.start(this);
+    //    visitor.end(this);
+    //}
 }
 
 "Concatenation of descriptions. Resulting text is the concatenation of description texts."
@@ -115,7 +192,7 @@ shared class CatDescription(
     "The description whose string representations will be concatenated."
     {Description *} descriptions
 ) satisfies Description {
-
+    
     "Node level: max node level of `descriptions`. CatDescription doesn't add any level."
     shared actual Integer level = maxLevel(descriptions);
     
@@ -131,7 +208,48 @@ shared class CatDescription(
         for(d in descriptions) {sb.append(d.string);}
         return sb.string;
     }
+    //shared actual void visit(DescriptionVisitor visitor) {
+    //    visitor.start(this);
+    //    visitor.end(this);
+    //}
+    shared actual DescriptionText toDescriptionText(DescriptorEnv descriptorEnv) {
+        return DescriptionTextNode(null, {
+            for(d in descriptions) d.toDescriptionText(descriptorEnv)
+        }.sequence);
+    }
 }
+
+
+
+
+
+//"Concatenation of descriptions, on a single line. Resulting text is the concatenation of description texts."
+//by ("Jean-Pierre Ragey")
+//shared class SingleLineCatDescription(
+//    "The description whose string representations will be concatenated."
+//    {SingleLineDescription *} descriptions
+//) satisfies SingleLineDescription {
+//    
+//    "Node level: max node level of `descriptions`. CatDescription doesn't add any level."
+//    shared actual Integer level = maxLevel(descriptions);
+//    
+//    "Append all descriptions contents to stringBuilder."
+//    shared actual void appendTo(StringBuilder stringBuilder, DescrWriter descrWriter, Integer depth, DescriptorEnv descriptorEnv) {
+//        for(Description d in descriptions) {
+//            d.appendTo(stringBuilder, descrWriter, depth /*keep same depth*/, descriptorEnv);
+//        }
+//    } 
+//    
+//    shared actual String string {
+//        value sb = StringBuilder();
+//        for(d in descriptions) {sb.append(d.string);}
+//        return sb.string;
+//    }
+//    //shared actual void visit(DescriptionVisitor visitor) {
+//    //    visitor.start(this);
+//    //    visitor.end(this);
+//    //}
+//}
 
 
 "Description of matching result, eg '44', '42/45', 'ERR @2: 42/*45*.
@@ -153,9 +271,13 @@ shared class MatchDescription(
     Boolean writeExpected = true,
     "If true, write actual object; otherwise ignore it. Usually used with null actual object."
     Boolean writeActual = true
-    ) satisfies Description {
-
+    ) satisfies Description 
+{
     shared actual Integer level = 0;
+
+    StringDescription separator = StringDescription("/"); 
+    ValueDescription? actDescr = writeActual then ValueDescription(textStyle, actualObj, descriptor) else null;
+    ValueDescription? expDescr = writeExpected then ValueDescription(normalStyle, expectedObj, descriptor) else null;
     
     "The message to append avoid duplicating actual and expected values. It is organized as follows:
      - if `prefix` is not null, it is added;
@@ -177,15 +299,15 @@ shared class MatchDescription(
         variable String actString = "";
         variable String expString = "";
         
-        if(writeActual) {
-            ValueDescription actDescr = ValueDescription(textStyle, actualObj, descriptor);
+        if(exists actDescr /*writeActual*/) {
+            //ValueDescription actDescr = ValueDescription(textStyle, actualObj, descriptor);
             actDescr.appendTo(sb, descrWriter, depth + 1, descriptorEnv);
             actString = sb.string;
         }
         sb.reset();
         
-        if(writeExpected) {
-            ValueDescription expDescr = ValueDescription(normalStyle, expectedObj, descriptor);
+        if(exists expDescr /*writeExpected*/) {
+            //ValueDescription expDescr = ValueDescription(normalStyle, expectedObj, descriptor);
             expDescr.appendTo(sb, descrWriter, depth + 1, descriptorEnv);
             expString = sb.string;
         }
@@ -196,6 +318,58 @@ shared class MatchDescription(
             stringBuilder.appendAll{expString, "/", actString};
         }
     }
+    
+    //shared actual void visit(DescriptionVisitor visitor) {
+    //    visitor.start(this);
+    //    
+    //    if(exists prefix) {
+    //        prefix.visit(visitor);
+    //    }
+    //    
+    //    if(exists actDescr, exists expDescr) {
+    //        if(actDescr == expDescr) {  // Don't repeat
+    //            actDescr.visit(visitor);
+    //        } else {
+    //            expDescr.visit(visitor);
+    //            separator.visit(visitor);
+    //            actDescr.visit(visitor);
+    //        }
+    //    } else if(exists actDescr) {
+    //        actDescr.visit(visitor);
+    //    } else if(exists expDescr) {
+    //        expDescr.visit(visitor);
+    //    }
+    //    
+    //    visitor.end(this);
+    //}
+    shared actual DescriptionText toDescriptionText(DescriptorEnv descriptorEnv) {
+        
+        variable DescriptionText? prefixDText = null;
+        if(exists prefix) {
+            prefixDText = prefix.toDescriptionText(descriptorEnv);
+        }
+        DescriptionText? actualDText = writeActual 
+            then ValueDescription(textStyle, actualObj, descriptor).toDescriptionText(descriptorEnv) 
+            else null; 
+        DescriptionText? expectedDText = writeExpected 
+            then ValueDescription(textStyle, expectedObj, descriptor).toDescriptionText(descriptorEnv) 
+            else null; 
+        
+        if(exists actualDText, exists expectedDText) {
+             
+            if(actualDText == expectedDText) {  // Don't repeat
+                return DescriptionTextNode(prefixDText, [actualDText]);
+            } else {
+                return DescriptionTextNode(prefixDText, [
+                    actualDText,
+                    DescriptionTextLeaf(normalStyle, "/"),
+                    expectedDText
+                ]);
+            }
+        }
+        return DescriptionTextNode(prefixDText, []);
+    }
+    
 }
 
 
@@ -267,6 +441,68 @@ shared class CompoundDescription(
         writeOptList(extraExpectedDescrs, stringBuilder, descriptionWriter, StringDescription(" => ERR ``extraExpectedDescrs.size`` expected not in actual list: "), depth, descriptorEnv);
         writeOptList(extraActualDescrs, stringBuilder, descriptionWriter, StringDescription(" => ERR ``extraActualDescrs.size`` actual not in expected list: "), depth, descriptorEnv);
     }
+    
+    
+    
+    
+    
+    // ***********************************************
+    DescriptionTextNode appendDList(DescriptionText? prefix, {Description*} descriptions, DescriptorEnv descriptorEnv) {
+        //variable DescriptionText? prefixDText = null;
+        //if(exists prefix) {
+        //    prefixDText = prefix.toDescriptionText(descriptorEnv);
+        //}
+        
+        variable Boolean first = true;
+        value descrTextBuilder = SequenceBuilder<DescriptionText>();
+        descrTextBuilder.append(DescriptionTextLeaf(normalStyle, "{"));
+        
+        for(d in descriptions) {
+            
+            DescriptionText descriptionText = d.toDescriptionText(descriptorEnv);
+            descrTextBuilder.append(descriptionText);
+            
+            if(first) {
+                first = false;
+            } else {
+                descrTextBuilder.append(DescriptionTextLeaf(normalStyle, ","));
+            }
+        }
+        
+        descrTextBuilder.append(DescriptionTextLeaf(normalStyle, "}"));
+        return DescriptionTextNode(prefix, descrTextBuilder.sequence);
+        
+    }
+    
+    shared actual DescriptionText toDescriptionText(DescriptorEnv descriptorEnv) {
+        variable DescriptionText? prefixDText = null;
+        if(exists prefixDescription) {
+            prefixDText = prefixDescription.toDescriptionText(descriptorEnv);
+        }
+        value descrTextBuilder = SequenceBuilder<DescriptionText>();
+        
+        DescriptionTextNode commons = appendDList(prefixDText, commonElementDescrs, descriptorEnv);
+        descrTextBuilder.append(commons);
+        //return DescriptionTextNode
+        
+        if(nonempty extraExpectedDescrs) {
+            DescriptionTextNode extraExpected = appendDList(
+                DescriptionTextLeaf(highlighted, " => ERR ``extraExpectedDescrs.size`` expected not in actual list: "), 
+                extraExpectedDescrs, descriptorEnv);
+            descrTextBuilder.append(extraExpected);
+        }
+        if(nonempty extraActualDescrs) {
+            DescriptionTextNode extraActual = appendDList(
+                DescriptionTextLeaf(highlighted, " => ERR ``extraActualDescrs.size`` actual not in expected list: "), 
+                extraActualDescrs, descriptorEnv);
+            descrTextBuilder.append(extraActual);
+        }
+        
+        return DescriptionTextNode(null /*prefix*/, descrTextBuilder.sequence);
+
+        
+    }
+    
 }
 
 shared class TreeDescription(
@@ -290,6 +526,13 @@ shared class TreeDescription(
 
     shared actual void appendTo(StringBuilder stringBuilder, DescrWriter descrWriter, Integer depth, DescriptorEnv descriptorEnv) {
         appendList(stringBuilder, descrWriter, description, children, depth, descriptorEnv);
+    }
+    
+    shared actual DescriptionText toDescriptionText(DescriptorEnv descriptorEnv) {
+        return DescriptionTextNode {
+            prefix = description.toDescriptionText(descriptorEnv);
+            children = {for(d in children) d.toDescriptionText(descriptorEnv)}.sequence;
+        };
     }
 }
 
@@ -323,6 +566,17 @@ shared class MapEntryDescription(
         keyDescr.appendTo(stringBuilder, descrWriter, depth + 1, descriptorEnv);
         descrWriter.writeText(stringBuilder, normalStyle, "->");
         valueDescr.appendTo(stringBuilder, descrWriter, depth + 1, descriptorEnv);
+    }
+    
+    shared actual DescriptionText toDescriptionText(DescriptorEnv descriptorEnv) {
+        return DescriptionTextNode {
+            prefix = null;
+            children = [
+                keyDescr.toDescriptionText(descriptorEnv),
+                DescriptionTextLeaf(normalStyle, "->"),
+                valueDescr.toDescriptionText(descriptorEnv)
+            ];
+        };
     }
 }
 
@@ -369,6 +623,18 @@ shared class ObjectFieldDescription(
         valueDescription.appendTo(stringBuilder, descrWriter, depth+1, descriptorEnv);
         descrWriter.writeText(stringBuilder, normalStyle, ")");
     }
+    
+    shared actual DescriptionText toDescriptionText(DescriptorEnv descriptorEnv) {
+        return DescriptionTextNode {
+            prefix = null;
+            children = [
+                DescriptionTextLeaf(normalStyle, fieldName),
+                DescriptionTextLeaf(normalStyle, ": ("),
+                valueDescription.toDescriptionText(descriptorEnv),
+                DescriptionTextLeaf(normalStyle, ": )")
+            ];
+        };
+    }
 }
 
 "Custom object description.
@@ -406,6 +672,17 @@ shared class ChildDescription (
         prefix.appendTo(stringBuilder, descrWriter, depth+1, descriptorEnv);
         descrWriter.writeText(stringBuilder, normalStyle, ": ");
         description.appendTo(stringBuilder, descrWriter, depth+1, descriptorEnv);
+    }
+    
+    shared actual DescriptionText toDescriptionText(DescriptorEnv descriptorEnv) {
+        return DescriptionTextNode {
+            prefix = null;
+            children = [
+                prefix.toDescriptionText(descriptorEnv),
+                DescriptionTextLeaf(normalStyle, ": "),
+                description.toDescriptionText(descriptorEnv)
+            ];
+        };
     }
 }
 

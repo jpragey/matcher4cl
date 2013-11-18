@@ -39,6 +39,17 @@ shared interface Matcher {
     
     "Short one-line description, eg 'operator =='"
     shared formal Description description(Matcher (Object? ) resolver);
+    
+    shared default Matcher or(Matcher matcher) {
+        return AnyMatcher({this, matcher});
+    }
+    shared default Matcher and(Matcher matcher) {
+        return AllMatcher({this, matcher});
+    }
+    shared default Matcher andNot(Matcher matcher) {
+        return AllMatcher({this, NotMatcher(matcher)});
+    }
+    
 }
 
 "Matcher based on comparison between two simple values, like Integer or String. 
@@ -673,10 +684,10 @@ shared class CreateMissingAdapters<T>(
             
             for(valueDecl in expectedAttributes /*definedButNotChecked*/) {
                 
-                print("Creating Adapter for attribute ``valueDecl``");
+                //print("Creating Adapter for attribute ``valueDecl``");
                 
                 if(!expectedAttributeSet.contains(valueDecl)) {
-                    print(" => Attribute ``valueDecl`` in ignored or explicit attributes list, rejecting");
+                    //print(" => Attribute ``valueDecl`` in ignored or explicit attributes list, rejecting");
                     continue;
                 }
                 
@@ -694,7 +705,7 @@ shared class CreateMissingAdapters<T>(
         
         if(errBuilder.empty) {
             value result = missingAdaptersBuilder.sequence;
-print("Created missingAdapters: ``result``");             
+//print("Created missingAdapters: ``result``");             
             return result;
         } else {
             return TreeDescription(StringDescription("ObjectMatcher<``className(expected)``>: FieldAdapter list and class fields don't match."), 
@@ -774,7 +785,7 @@ shared class ObjectMatcher<T> (
             SequenceBuilder<ObjectFieldDescription> fieldDescrSb = SequenceBuilder<ObjectFieldDescription>();
             
             for(fieldMatcher in currentFieldAdapters) {
-print("** => Matching field ``fieldMatcher.attribute``");                
+//print("** => Matching field ``fieldMatcher.attribute``");                
                 MatcherResult fieldResult = fieldMatcher.match(actual, matcherResolver);
                 if(fieldResult.failed) {
                     succeeded = false;
@@ -793,6 +804,58 @@ print("** => Matching field ``fieldMatcher.attribute``");
     
 }
 
+shared class ObjectMatcherBuilder<T>() given T satisfies Object {
+    value adapters = SequenceBuilder< FieldAdapter<T> (T)  >();
+    
+    shared variable MissingAdapterStrategy<T> missingAdapterStrategy = IgnoreMissingAdapters<T>(); 
+    
+    shared variable Descriptor currentDescriptor = DefaultDescriptor(); 
+    
+    
+    shared ObjectMatcherBuilder<T> other(MissingAdapterStrategy<T> missingAdapterStrategy) {
+        this.missingAdapterStrategy = missingAdapterStrategy;
+        return this;
+    }
+    
+    shared ObjectMatcherBuilder<T> ignoreOther() => other(IgnoreMissingAdapters<T>());
+    shared ObjectMatcherBuilder<T> createOther() => other(CreateMissingAdapters<T>());
+    shared ObjectMatcherBuilder<T> failIfMissing() => other(FailForMissingAdapter<T>());
+    
+    shared ObjectMatcherBuilder<T> descriptor(Descriptor descriptor) {
+        this.currentDescriptor = currentDescriptor;
+        return this;
+    }
+    
+    shared ObjectMatcherBuilder<T> add<Field>(Attribute<T, Field> attr, Matcher(Field) attrMatcher = (Field expected) => EqualsMatcher(expected))
+        given Field satisfies Object 
+    {
+        
+        adapters.append((T expected) => FieldAdapter(attr, attrMatcher(attr.bind(expected).get())));
+        return this;
+    }
+    
+    shared ObjectMatcher<T> get(T expected) {
+        ObjectMatcher<T> m = ObjectMatcher<T>{
+            expected = expected;
+            fieldAdapters = {for(a in adapters.sequence) a(expected)};
+            descriptor = currentDescriptor;
+            missingAdapterStrategy = missingAdapterStrategy; 
+        } ;
+        return m;
+    }
+}
+" Simplification of [[ObjectMatcherBuilder]]
+     assertThat(Country(\"Germany\", \"Berlin\"),
+         matcher<Country>()
+          .add(`Country.name`)
+          .add(`Country.capital`)
+          .get(Country(\"Germany\", \"Berlin\"))
+ "
+shared ObjectMatcherBuilder<T> matcher<T>() given T satisfies Object => ObjectMatcherBuilder<T>();
+
+
+
+
 Description wrongTypeDescription<T>(
     Object? actual, 
     T expected, 
@@ -810,6 +873,30 @@ Description wrongTypeDescription<T>(
     
     return d;    
 }
+
+"
+ "
+shared class AttributeMatcher<T, Field>(
+    Attribute<T, Field> attr,
+    Matcher fieldMatcher
+) satisfies Matcher 
+        given T satisfies Object 
+        given Field satisfies Object 
+{
+    
+    shared actual Description description(Matcher(Object?) resolver) => StringDescription("");
+    
+    shared actual MatcherResult match(Object? actual, Matcher(Object?) resolver) {
+        if(is T actual) {
+            Field s = attr.bind(actual).get();
+            return fieldMatcher.match(s);
+        } else {
+            return MatcherResult(false, StringDescription(""));
+        }
+    }
+}
+
+
 
 "Compound matcher, matches when all child matchers match."
 by ("Jean-Pierre Ragey")
@@ -846,6 +933,40 @@ shared class AllMatcher (
     }
     
 }
+
+
+"Compound matcher, matches when all either matcher match."
+by ("Jean-Pierre Ragey")
+shared class EitherMatcher (
+    Matcher matcher0,
+    Matcher matcher1
+) satisfies Matcher 
+{
+    "AllMatcher short description: \"All\""
+    shared actual Description description(Matcher (Object? ) resolver) => StringDescription("Either", normalStyle); 
+    
+    "Succeeds if all child matchers match."
+    shared actual MatcherResult match(Object? actual, Matcher (Object? ) matcherResolver) {
+        MatcherResult mr0 = matcher0.match(actual, matcherResolver);
+        MatcherResult mr1 = matcher1.match(actual, matcherResolver);
+        
+        Boolean success = (mr0.failed != mr1.succeeded);
+        String successStr(Boolean b) => b then "success" else "failed";
+        
+        StringDescription rootDescription = success 
+            then StringDescription("Either() operator succeeded (``successStr(mr0.succeeded)`` / ``successStr(mr1.succeeded)``)")
+            else StringDescription("")
+        ;
+        
+        value descr = TreeDescription(rootDescription, {
+            mr0.matchDescription, 
+            mr1.matchDescription
+        });
+        return MatcherResult(success, descr);
+    }
+    
+}
+
 
 "Compound matcher, matches when any child matcher match."
 by ("Jean-Pierre Ragey")
@@ -1040,4 +1161,30 @@ shared class Is(
         return matcher.match(actual, resolver);
     }
 }
+
+
+
+shared class CombinableBothMatcher(Matcher firstMatcher) {
+    shared Matcher and(Matcher matcher) {
+        return AllMatcher({firstMatcher, matcher});
+    }
+}
+shared CombinableBothMatcher both(Matcher matcher) 
+        => CombinableBothMatcher(matcher);
+
+shared class CombinableEitherMatcher(Matcher firstMatcher) {
+    shared Matcher or(Matcher matcher) {
+        return EitherMatcher(firstMatcher, matcher);
+    }
+}
+
+
+shared CombinableEitherMatcher either(Matcher matcher) 
+        => CombinableEitherMatcher(matcher);
+
+shared Matcher not(Matcher matcher) 
+        => NotMatcher(matcher);
+
+
+
 
